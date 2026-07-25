@@ -1,14 +1,31 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:io' show Platform;
 
 // Switch para sa Local Development vs Live Testing
-const bool isLocal = true; 
+// I-set sa 'false' bago i-deploy sa Render para sa Live Website
+const bool isLocal = false; 
 
-const String _localBaseUrl = 'http://10.0.2.2:3000'; // Gamitin ang IP na ito para sa Android Emulator
-const String _liveBaseUrl = 'https://pos-system-u53n.onrender.com';
+const String _liveBaseUrl = 'https://pos-system-9ucq.onrender.com';
 
 String get baseUrl {
-  if (kIsWeb) {
-    return Uri.base.origin;
+  if (!isLocal) {
+    return _liveBaseUrl;
   }
-  return isLocal ? _localBaseUrl : _liveBaseUrl;
+
+  // Local Development:
+  if (kIsWeb) {
+    // Kung Flutter Web ang gamit, ituro sa local NestJS port 3000
+    return 'http://localhost:3000';
+  }
+
+  // Mobile Development:
+  try {
+    if (Platform.isAndroid) {
+      return 'http://10.0.2.2:3000';
+    }
+  } catch (e) {
+    // Fallback
+  }
+  
+  return 'http://localhost:3000';
 }
