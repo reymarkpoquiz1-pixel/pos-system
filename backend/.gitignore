@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+npm-debug.log
+backups/
+# uploads/ (Allowed for initial image sync)
+*.log
+.DS_Store

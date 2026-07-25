@@ -1,0 +1,59 @@
+﻿# Flutter/Dart
+.dart_tool/
+.pub-cache/
+.pub/
+build/
+.metadata
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.artifacts/
+# End of Flutter core ignores
+
+# Android
+android/app/build/
+android/local.properties
+android/key.properties
+*.keystore
+*.jks
+
+# iOS
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+ios/Flutter/App.framework
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Runner/GeneratedPluginRegistrant.h
+ios/Runner/GeneratedPluginRegistrant.m
+
+# IDE Files
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+
+# Platform specific ephemeral files
+linux/flutter/ephemeral/
+macos/Flutter/ephemeral/
+windows/flutter/ephemeral/
+
+# Generated plugin registrant
+lib/generated_plugin_registrant.dart
+
+# Logs and databases
+*.log
+*.sql
+*.sqlite
+flutter_*.log
+
+# Web/Node
+node_modules/
+package-lock.json
+
+# Environment variables
+.env
+
+# OS Files
+.DS_Store
+Thumbs.db
