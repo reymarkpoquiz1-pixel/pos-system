@@ -7,6 +7,7 @@ import 'package:pos/core/services/database_helper.dart';
 import 'package:pos/core/services/sync_service.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:pos/core/constants/config.dart';
+import 'package:pos/core/services/connectivity_service.dart';
 
 class PosView extends StatefulWidget {
   final String username;

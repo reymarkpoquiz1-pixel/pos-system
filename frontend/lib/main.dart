@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 import 'core/constants/config.dart';
 import 'core/services/api_service.dart';
 import 'features/auth/views/register_screen.dart';
-import 'features/auth/views/otp_screen.dart';
 import 'features/dashboard/views/admin_dashboard.dart';
 import 'features/dashboard/views/staff_dashboard.dart';
 import 'features/customer_app/views/user_dashboard.dart';
