@@ -410,6 +410,33 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
+  void _handleProductUpdate(dynamic updatedProduct) {
+    setState(() {
+      List<dynamic> newList = List.from(_productsList);
+      int index = newList.indexWhere((p) => p['id'].toString() == updatedProduct['id'].toString());
+      if (updatedProduct['status'] == 'Archived') {
+        if (index != -1) newList.removeAt(index);
+      } else {
+        if (index != -1) {
+          newList[index] = updatedProduct;
+        } else {
+          newList.insert(0, updatedProduct);
+        }
+      }
+      _productsList = newList;
+    });
+
+    // Silently update cache
+    SharedPreferences.getInstance().then((prefs) {
+      final String? cachedData = prefs.getString('admin_dashboard_cache');
+      if (cachedData != null) {
+        var data = json.decode(cachedData);
+        data['products'] = _productsList;
+        prefs.setString('admin_dashboard_cache', json.encode(data));
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -465,6 +492,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           ProductsView(
                             productsList: _productsList,
                             onRefresh: _fetchAllData,
+                            onProductUpdated: _handleProductUpdate,
                             isMobile: isMobile,
                             userId: widget.userId,
                             isLoading: _isLoading,

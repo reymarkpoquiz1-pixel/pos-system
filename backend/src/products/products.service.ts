@@ -84,32 +84,48 @@ export class ProductsService {
 
       const saved = await manager.save(product);
 
-      const actingAdminId = admin_id || added_by;
-      await this.activityLogsService.log(actingAdminId ? Number(actingAdminId) : null, action, details, ip);
+      // Re-fetch to get relations (category) for mapping
+      const fullProduct = await manager.findOne(Product, {
+        where: { id: saved.id },
+        relations: { category: true },
+      });
 
-      return { success: true, data: saved };
+      const actingAdminId = admin_id || added_by;
+      await this.activityLogsService.log(
+        actingAdminId ? Number(actingAdminId) : null,
+        action,
+        details,
+        ip,
+      );
+
+      return {
+        success: true,
+        data: this.mapProduct(fullProduct)
+      };
     });
+  }
+
+  private mapProduct(p: Product) {
+    const allImages = p.imageUrl ? p.imageUrl.split(',') : [];
+    return {
+      ...p,
+      image_url: allImages.length > 0 ? allImages[0] : null,
+      images: allImages,
+      stock_quantity: p.stockQuantity,
+      selling_price: p.sellingPrice,
+      cost_price: p.purchasePrice,
+      reorder_level: p.reorderLevel,
+      category_name: p.category?.name,
+      created_at: p.createdAt,
+      updated_at: p.updatedAt,
+    };
   }
 
   async findAll() {
     const products = await this.productsRepository.find({
       relations: { category: true },
     });
-    return products.map((p) => {
-      const allImages = p.imageUrl ? p.imageUrl.split(',') : [];
-      return {
-        ...p,
-        image_url: allImages.length > 0 ? allImages[0] : null,
-        images: allImages,
-        stock_quantity: p.stockQuantity,
-        selling_price: p.sellingPrice,
-        cost_price: p.purchasePrice,
-        reorder_level: p.reorderLevel,
-        category_name: p.category?.name,
-        created_at: p.createdAt,
-        updated_at: p.updatedAt,
-      };
-    });
+    return products.map((p) => this.mapProduct(p));
   }
 
   async adjustStock(data: any) {

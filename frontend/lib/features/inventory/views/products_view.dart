@@ -18,6 +18,7 @@ import '../widgets/product_dialogs.dart';
 class ProductsView extends StatefulWidget {
   final List<dynamic> productsList;
   final VoidCallback onRefresh;
+  final Function(dynamic)? onProductUpdated;
   final bool isMobile;
   final int? userId;
   final bool isLoading;
@@ -26,6 +27,7 @@ class ProductsView extends StatefulWidget {
     super.key,
     required this.productsList,
     required this.onRefresh,
+    this.onProductUpdated,
     required this.isMobile,
     this.userId,
     this.isLoading = false,
@@ -373,6 +375,7 @@ class _ProductsViewState extends State<ProductsView> {
                               return SkeletonLoader(width: double.infinity, height: double.infinity, borderRadius: 16);
                             }
                             return ProductGridCard(
+                              key: ValueKey(_filteredProducts[index]['id']?.toString() ?? index.toString()),
                               product: _filteredProducts[index],
                               onTap: () => _selectProduct(_filteredProducts[index]),
                             );
@@ -722,9 +725,19 @@ class _ProductsViewState extends State<ProductsView> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Product archived successfully'), backgroundColor: Colors.green)
           );
+
+          // Optimistic local removal
+          setState(() {
+            _products.removeWhere((p) => p['id'].toString() == productId.toString());
+          });
+
           _clearForm();
           setState(() => _showDetails = false);
-          widget.onRefresh();
+          
+          // Silently notify parent to update its list too
+          if (widget.onProductUpdated != null) {
+            widget.onProductUpdated!({'id': productId, 'status': 'Archived'});
+          }
         } else {
           throw Exception(data['message']);
         }
@@ -907,9 +920,13 @@ class _ProductsViewState extends State<ProductsView> {
       if (data['success']) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Product saved successfully!'), backgroundColor: Colors.green));
+        
+        if (widget.onProductUpdated != null) {
+          widget.onProductUpdated!(data['data']);
+        }
+
         _clearForm();
         setState(() => _showDetails = false);
-        widget.onRefresh();
       } else {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${data['message']}')));

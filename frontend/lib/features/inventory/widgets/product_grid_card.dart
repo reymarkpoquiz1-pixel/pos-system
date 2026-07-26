@@ -22,6 +22,14 @@ class _ProductGridCardState extends State<ProductGridCard> {
     _parseImages();
   }
 
+  @override
+  void didUpdateWidget(ProductGridCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.product != oldWidget.product) {
+      _parseImages();
+    }
+  }
+
   void _parseImages() {
     final prod = widget.product;
     var imagesData = prod['images'] ?? prod['product_images'] ?? prod['gallery'];
