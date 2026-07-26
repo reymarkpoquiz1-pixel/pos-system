@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:io' as io;
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart';
@@ -10,7 +10,7 @@ class BackgroundRemovalService {
   /// Gagamit tayo ng Stable Gradio 4 Queue API (Hugging Face)
   /// Sinusuportahan nito ang session hashing at SSE events.
   static Future<XFile?> removeBackground(XFile imageFile) async {
-    debugPrint('Magic Clean: Starting background removal for ${imageFile.path}');
+    debugPrint('Magic Clean: Starting background removal for ${kIsWeb ? "Web" : "Mobile"}');
     final client = http.Client();
     final sessionHash = _generateSessionHash();
     const spaceUrl = 'https://briaai-bria-rmbg-1-4.hf.space';
@@ -90,8 +90,7 @@ class BackgroundRemovalService {
                   debugPrint('Magic Clean: Final Download URL: $fullUrl');
                   final imgRes = await http.get(Uri.parse(fullUrl));
                   if (imgRes.statusCode == 200) {
-                    final savedFile = await _saveToFile(imgRes.bodyBytes);
-                    return XFile(savedFile.path);
+                    return await _createXFile(imgRes.bodyBytes);
                   } else {
                     debugPrint('Magic Clean: Download failed with status ${imgRes.statusCode}');
                   }
@@ -127,7 +126,14 @@ class BackgroundRemovalService {
   static Future<String?> _uploadFile(http.Client client, XFile file, String spaceUrl) async {
     try {
       final request = http.MultipartRequest('POST', Uri.parse('$spaceUrl/upload'));
-      request.files.add(await http.MultipartFile.fromPath('files', file.path));
+      
+      // Use bytes instead of path for Web compatibility
+      final bytes = await file.readAsBytes();
+      request.files.add(http.MultipartFile.fromBytes(
+        'files',
+        bytes,
+        filename: file.name,
+      ));
 
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
@@ -151,12 +157,19 @@ class BackgroundRemovalService {
     return List.generate(11, (index) => chars[random.nextInt(chars.length)]).join();
   }
 
-  static Future<File> _saveToFile(Uint8List bytes) async {
-    final tempDir = await getTemporaryDirectory();
+  static Future<XFile> _createXFile(Uint8List bytes) async {
     final fileName = 'cleaned_${DateTime.now().millisecondsSinceEpoch}.png';
-    final cleanedFile = File('${tempDir.path}/$fileName');
-    await cleanedFile.writeAsBytes(bytes);
-    debugPrint('Magic Clean: Success! Saved at ${cleanedFile.path}');
-    return cleanedFile;
+    
+    if (kIsWeb) {
+      // For Web, create XFile directly from bytes
+      return XFile.fromData(bytes, name: fileName, mimeType: 'image/png');
+    } else {
+      // For Mobile/Desktop, save to temp file first
+      final tempDir = await getTemporaryDirectory();
+      final cleanedFile = io.File('${tempDir.path}/$fileName');
+      await cleanedFile.writeAsBytes(bytes);
+      debugPrint('Magic Clean: Success! Saved at ${cleanedFile.path}');
+      return XFile(cleanedFile.path);
+    }
   }
 }
