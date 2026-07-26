@@ -16,31 +16,28 @@ class BackgroundRemovalService {
     const spaceUrl = 'https://briaai-bria-rmbg-1-4.hf.space';
     
     try {
-      // Step 1: Upload image to Gradio server
-      debugPrint('Magic Clean: Uploading image to HF Space...');
-      final uploadRes = await _uploadFile(client, imageFile, spaceUrl);
-      if (uploadRes == null) {
-        debugPrint('Magic Clean: Upload failed.');
-        return null;
-      }
-      debugPrint('Magic Clean: Upload successful: $uploadRes');
+      // Step 1: Convert image to Base64 Data URI
+      debugPrint('Magic Clean: Converting image to Base64...');
+      final bytes = await imageFile.readAsBytes();
+      final base64String = base64Encode(bytes);
+      final dataUri = 'data:${imageFile.mimeType ?? "image/png"};base64,$base64String';
 
-      // Step 2: Call Predict API (Synchronous is better for Web than SSE)
-      debugPrint('Magic Clean: Calling Predict API...');
+      // Step 2: Call Predict API with Base64 data
+      debugPrint('Magic Clean: Calling Predict API (Base64)...');
       final response = await client.post(
         Uri.parse('$spaceUrl/api/predict'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           "data": [
             {
-              "path": uploadRes,
+              "path": dataUri,
               "meta": {"_type": "gradio.FileData"}
             }
           ],
           "fn_index": 0,
           "session_hash": sessionHash
         }),
-      ).timeout(const Duration(seconds: 30));
+      ).timeout(const Duration(seconds: 45));
 
       if (response.statusCode != 200) {
         debugPrint('Magic Clean Predict Error: ${response.statusCode} - ${response.body}');
@@ -69,14 +66,14 @@ class BackgroundRemovalService {
           debugPrint('Magic Clean: Final Download URL: $fullUrl');
           final imgRes = await http.get(Uri.parse(fullUrl));
           if (imgRes.statusCode == 200) {
-            final bytes = imgRes.bodyBytes;
+            final resultBytes = imgRes.bodyBytes;
             if (kIsWeb) {
-              return XFile.fromData(bytes, name: 'cleaned_${imageFile.name}', mimeType: 'image/png');
+              return XFile.fromData(resultBytes, name: 'cleaned_${imageFile.name}', mimeType: 'image/png');
             } else {
               final tempDir = await getTemporaryDirectory();
               final fileName = 'cleaned_${DateTime.now().millisecondsSinceEpoch}.png';
               final cleanedFile = io.File('${tempDir.path}/$fileName');
-              await cleanedFile.writeAsBytes(bytes);
+              await cleanedFile.writeAsBytes(resultBytes);
               return XFile(cleanedFile.path);
             }
           } else {
@@ -92,33 +89,6 @@ class BackgroundRemovalService {
     } finally {
       client.close();
     }
-  }
-
-  /// Helper to upload file to Gradio /upload endpoint
-  static Future<String?> _uploadFile(http.Client client, XFile file, String spaceUrl) async {
-    try {
-      final request = http.MultipartRequest('POST', Uri.parse('$spaceUrl/upload'));
-      final bytes = await file.readAsBytes();
-      request.files.add(http.MultipartFile.fromBytes(
-        'files', 
-        bytes,
-        filename: file.name,
-      ));
-      
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-      
-      if (response.statusCode == 200) {
-        final List<dynamic> paths = jsonDecode(response.body);
-        if (paths.isNotEmpty) {
-          return paths[0].toString();
-        }
-      }
-      debugPrint('Magic Clean Upload Error: ${response.statusCode} - ${response.body}');
-    } catch (e) {
-      debugPrint('Magic Clean Upload Exception: $e');
-    }
-    return null;
   }
 
   static String _generateSessionHash() {
