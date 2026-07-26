@@ -3,6 +3,6 @@ dist/
 .env
 npm-debug.log
 backups/
-# uploads/ (Allowed for initial image sync)
+uploads/
 *.log
 .DS_Store
