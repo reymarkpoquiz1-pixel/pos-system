@@ -44,6 +44,31 @@ class _AdminDashboardState extends State<AdminDashboard> {
   bool _isSyncing = false;
   bool _isSidebarExpanded = true;
 
+  // Data Lists
+  Map<String, dynamic> _dashboardStats = {
+    'total_sales_today': '0.00',
+    'new_customers_today': '0',
+    'total_transactions_today': '0',
+    'total_revenue_month': '0.00',
+    'low_stock_count': 0,
+  };
+  Map<String, dynamic> _storeSettings = {};
+  Map<String, dynamic> _chartData = {'hourly_sales': [], 'payment_methods': []};
+  List<dynamic> _productsList = [];
+  List<dynamic> _topSellingProducts = [];
+  List<dynamic> _categoriesList = [];
+  List<dynamic> _employeesList = [];
+  List<dynamic> _customersList = [];
+  List<dynamic> _transactionsList = [];
+  List<dynamic> _realNotifications = [];
+  List<dynamic> _branches = [];
+  int _selectedBranchId = 0;
+
+  static const Color sidebarBg = Colors.white;
+  static const Color contentBg = Color(0xFFF7E6E9);
+  static const Color activeMenuBg = Color(0xFFD68A96);
+  static const Color textDark = Color(0xFF1C1B1F);
+
   @override
   void initState() {
     super.initState();
@@ -64,95 +89,52 @@ class _AdminDashboardState extends State<AdminDashboard> {
           _employeesList = data['employees'] ?? [];
           _customersList = data['customers'] ?? [];
           _transactionsList = data['transactions'] ?? [];
-          _isLoading = false; // Show cached data immediately
+          _isLoading = false;
         });
       }
     } catch (e) {
-      debugPrint('Cache Load Error: $e');
+      debugPrint('Cache Error: $e');
     }
   }
 
-  Map<String, dynamic> _dashboardStats = {
-    'total_sales_today': '0.00',
-    'new_customers_today': '0',
-    'total_transactions_today': '0',
-    'total_revenue_month': '0.00',
-    'low_stock_count': 0,
-  };
-  Map<String, dynamic> _storeSettings = {};
-  Map<String, dynamic> _chartData = {
-    'hourly_sales': [],
-    'payment_methods': [],
-  };
-  List<dynamic> _productsList = [];
-  List<dynamic> _topSellingProducts = [];
-  List<dynamic> _employeesList = [];
-  List<dynamic> _transactionsList = [];
-  List<dynamic> _categoriesList = [];
-  List<dynamic> _customersList = [];
-  List<dynamic> _realNotifications = [];
-  List<dynamic> _branches = [];
-  int _selectedBranchId = 0; // 0 for Global HQ
-
-  static const Color sidebarBg = Colors.white;
-  static const Color contentBg = Color(0xFFF7E6E9);
-  static const Color activeMenuBg = Color(0xFFD68A96);
-  static const Color textDark = Color(0xFF1C1B1F);
-
   Future<void> _fetchAllData() async {
     bool hasAnyData = _productsList.isNotEmpty || _dashboardStats['total_sales_today'] != '0.00';
-    if (!hasAnyData) {
-      setState(() => _isLoading = true);
-    } else {
-      setState(() => _isSyncing = true);
-    }
+    if (!hasAnyData) setState(() => _isLoading = true);
+    else setState(() => _isSyncing = true);
     
     try {
       final response = await ApiService.get('admin/get_initial_data?user_id=${widget.userId}&branch_id=$_selectedBranchId');
-
-      if (response.statusCode != 200) {
-        if (mounted) {
-          setState(() { _isLoading = false; _isSyncing = false; });
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('admin_dashboard_cache', response.body);
+          setState(() {
+            if (data['store_settings'] != null) {
+              _storeSettings = data['store_settings'];
+              _storeName = data['store_settings']['store_name'] ?? _storeName;
+              _logoUrl = data['store_settings']['logo_url'];
+            }
+            if (data['current_user'] != null) _profileImageUrl = data['current_user']['profile_image'];
+            _dashboardStats = data['stats'] ?? _dashboardStats;
+            _chartData = data['charts'] ?? {'hourly_sales': [], 'payment_methods': []};
+            _productsList = data['products'] ?? [];
+            _topSellingProducts = data['top_selling_products'] ?? [];
+            _categoriesList = data['categories'] ?? [];
+            _employeesList = data['employees'] ?? [];
+            _customersList = data['customers'] ?? [];
+            _transactionsList = data['transactions'] ?? [];
+            _realNotifications = data['notifications'] ?? [];
+            _branches = data['branches'] ?? [];
+            _isLoading = false;
+            _isSyncing = false;
+          });
         }
-        return;
-      }
-
-      if (!mounted) return;
-      final data = json.decode(response.body);
-
-      if (data['success'] == true) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('admin_dashboard_cache', response.body);
-
-        setState(() {
-          if (data['store_settings'] != null) {
-            _storeSettings = data['store_settings'];
-            _storeName = data['store_settings']['store_name'] ?? _storeName;
-            _logoUrl = data['store_settings']['logo_url'];
-          }
-          if (data['current_user'] != null) {
-            _profileImageUrl = data['current_user']['profile_image'];
-          }
-          _dashboardStats = data['stats'] ?? _dashboardStats;
-          _chartData = data['charts'] ?? {'hourly_sales': [], 'payment_methods': []};
-          _productsList = data['products'] ?? [];
-          _topSellingProducts = data['top_selling_products'] ?? [];
-          _categoriesList = data['categories'] ?? [];
-          _employeesList = data['employees'] ?? [];
-          _customersList = data['customers'] ?? [];
-          _transactionsList = data['transactions'] ?? [];
-          _realNotifications = data['notifications'] ?? [];
-          _branches = data['branches'] ?? [];
-          _isLoading = false;
-          _isSyncing = false;
-        });
-      } else {
-        setState(() { _isLoading = false; _isSyncing = false; });
       }
     } catch (e) {
-      if (mounted) {
-        setState(() { _isLoading = false; _isSyncing = false; });
-      }
+      debugPrint('Fetch Error: $e');
+    } finally {
+      if (mounted) setState(() { _isLoading = false; _isSyncing = false; });
     }
   }
 
@@ -160,7 +142,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
     setState(() {
       List<dynamic> newList = List.from(_productsList);
       int index = newList.indexWhere((p) => p['id'].toString() == updatedProduct['id'].toString());
-      
       if (updatedProduct['status'] == 'Archived') {
         if (index != -1) newList.removeAt(index);
       } else {
@@ -175,7 +156,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
       }
       _productsList = newList;
     });
-
     SharedPreferences.getInstance().then((prefs) {
       final String? cachedData = prefs.getString('admin_dashboard_cache');
       if (cachedData != null) {
@@ -212,36 +192,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
           userId: widget.userId,
           isLoading: _isLoading,
         );
-      case 'Categories':
-        return CategoriesView(
-          categoriesList: _categoriesList,
-          onRefresh: _fetchAllData,
-          isMobile: isMobile,
-        );
-      case 'Inventory':
-        return InventoryView(
-          key: const PageStorageKey('InventoryView'),
-          productsList: _productsList,
-          userId: widget.userId,
-          onRefresh: _fetchAllData,
-        );
-      case 'Employees':
-        return EmployeesView(
-          employeesList: _employeesList,
-          isMobile: isMobile,
-          onRefresh: _fetchAllData,
-        );
-      case 'Customers':
-        return CustomersView(
-          customersList: _customersList,
-          onRefresh: _fetchAllData,
-        );
-      case 'Orders':
-        return TransactionsView(
-          transactionsList: _transactionsList,
-          onRefresh: _fetchAllData,
-          storeSettings: _storeSettings,
-        );
+      case 'Categories': return CategoriesView(categoriesList: _categoriesList, onRefresh: _fetchAllData, isMobile: isMobile);
+      case 'Inventory': return InventoryView(key: const PageStorageKey('InventoryView'), productsList: _productsList, userId: widget.userId, onRefresh: _fetchAllData);
+      case 'Employees': return EmployeesView(employeesList: _employeesList, isMobile: isMobile, onRefresh: _fetchAllData);
+      case 'Customers': return CustomersView(customersList: _customersList, onRefresh: _fetchAllData);
+      case 'Orders': return TransactionsView(transactionsList: _transactionsList, onRefresh: _fetchAllData, storeSettings: _storeSettings);
       case 'Refunds': return const RefundsView();
       case 'Promos': return const PromosView();
       case 'Vouchers': return const VouchersView();
@@ -292,9 +247,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 child: Column(
                   children: [
                     if (!isMobile) _buildTopNavbar(),
-                    Expanded(
-                      child: _buildActiveView(isMobile),
-                    ),
+                    Expanded(child: _buildActiveView(isMobile)),
                   ],
                 ),
               ),
@@ -368,9 +321,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 image: DecorationImage(
                   image: NetworkImage('$baseUrl/$_logoUrl'),
                   fit: BoxFit.contain,
-                  onError: (exception, stackTrace) {
-                    debugPrint('Sidebar logo error: $exception');
-                  },
+                  onError: (exception, stackTrace) => debugPrint('Logo error'),
                 ),
               ),
             )
@@ -391,14 +342,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   List<Widget> _buildAppBarActions() {
-    int unreadCount = _realNotifications.where((n) => n['is_read'].toString() == '0' || n['is_read'] == 0).length;
+    int unreadCount = _realNotifications.where((n) => n['is_read'] == '0' || n['is_read'] == 0).length;
     return [
       IconButton(icon: const Icon(Icons.refresh, size: 20, color: textDark), onPressed: _fetchAllData),
       IconButton(
         onPressed: _showNotificationDialog,
         icon: Stack(
           alignment: Alignment.center,
-          clipBehavior: Clip.none,
           children: [
             const Icon(Icons.notifications_none_rounded, color: Colors.black87, size: 22),
             if (unreadCount > 0)
@@ -423,9 +373,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
           backgroundImage: _profileImageUrl != null
               ? NetworkImage('$baseUrl/uploads/$_profileImageUrl')
               : const NetworkImage('https://i.pravatar.cc/150?img=47'),
-          onBackgroundImageError: (exception, stackTrace) {
-            debugPrint('Appbar profile image error: $exception');
-          },
         ),
       ),
       const SizedBox(width: 16),
@@ -433,7 +380,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Widget _buildTopNavbar() {
-    int unreadCount = _realNotifications.where((n) => n['is_read'].toString() == '0' || n['is_read'] == 0).length;
+    int unreadCount = _realNotifications.where((n) => n['is_read'] == '0' || n['is_read'] == 0).length;
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -480,11 +427,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               if (_isSyncing)
                 const Padding(
                   padding: EdgeInsets.only(right: 8.0),
-                  child: SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: activeMenuBg),
-                  ),
+                  child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: activeMenuBg)),
                 ),
               IconButton(icon: const Icon(Icons.refresh, color: textDark), onPressed: _fetchAllData),
               const SizedBox(width: 10),
@@ -492,7 +435,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 onPressed: _showNotificationDialog,
                 icon: Stack(
                   alignment: Alignment.center,
-                  clipBehavior: Clip.none,
                   children: [
                     const Icon(Icons.notifications_none_rounded, color: Colors.black87, size: 24),
                     if (unreadCount > 0)
@@ -530,9 +472,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
             backgroundImage: _profileImageUrl != null
                 ? NetworkImage('$baseUrl/uploads/$_profileImageUrl')
                 : const NetworkImage('https://i.pravatar.cc/150?img=47'),
-            onBackgroundImageError: (exception, stackTrace) {
-              debugPrint('User profile image error: $exception');
-            },
           ),
           const SizedBox(width: 8),
           Column(
@@ -648,16 +587,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
     }
-  }
-
-  int _getMenuIndex(String menu) {
-    const menus = [
-      'Dashboard', 'Products', 'Categories', 'Inventory', 'Employees',
-      'Customers', 'Orders', 'Refunds', 'Promos', 'Vouchers',
-      'Payments', 'Suppliers', 'Expenses', 'Reports', 'Audit Logs', 'Shift Management', 'Review Management', 'Settings'
-    ];
-    int idx = menus.indexOf(menu);
-    return idx != -1 ? idx : 0;
   }
 }
 

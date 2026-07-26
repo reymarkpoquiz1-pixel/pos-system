@@ -100,7 +100,7 @@ export class ProductsService {
 
       return {
         success: true,
-        data: this.mapProduct(fullProduct)
+        data: fullProduct ? this.mapProduct(fullProduct) : null
       };
     });
   }
