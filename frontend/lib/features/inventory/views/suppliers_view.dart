@@ -55,15 +55,16 @@ class _SuppliersViewState extends State<SuppliersView> with SingleTickerProvider
         if (data['success']) {
           setState(() {
             _suppliers = data['suppliers'] ?? [];
-            _isLoading = false;
           });
         }
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isLoading = false);
+        debugPrint('Supplier Fetch Error: $e');
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 

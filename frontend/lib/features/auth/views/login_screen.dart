@@ -20,13 +20,32 @@ class _LoginScreenState extends State<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  String _statusMessage = "";
+  int _retryCount = 0;
   String _storeName = "A&M Store POS";
   String? _logoUrl;
 
   @override
   void initState() {
     super.initState();
+    _loadCachedSettings();
     _fetchStoreName();
+  }
+
+  Future<void> _loadCachedSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedName = prefs.getString('cached_store_name');
+      final cachedLogo = prefs.getString('cached_logo_url');
+      if (cachedName != null || cachedLogo != null) {
+        setState(() {
+          if (cachedName != null) _storeName = "$cachedName POS";
+          if (cachedLogo != null) _logoUrl = cachedLogo;
+        });
+      }
+    } catch (e) {
+      debugPrint("Cache load error: $e");
+    }
   }
 
   Future<void> _fetchStoreName() async {
@@ -35,10 +54,18 @@ class _LoginScreenState extends State<LoginScreen> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['success']) {
+          final sName = data['settings']['store_name'] ?? 'My Store';
+          final lUrl = data['settings']['logo_url'];
+          
           setState(() {
-            _storeName = "${data['settings']['store_name'] ?? 'My Store'} POS";
-            _logoUrl = data['settings']['logo_url'];
+            _storeName = "$sName POS";
+            _logoUrl = lUrl;
           });
+
+          // Update cache
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('cached_store_name', sName);
+          if (lUrl != null) await prefs.setString('cached_logo_url', lUrl);
         }
       }
     } catch (e) {
@@ -59,6 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() {
       _isLoading = true;
+      _statusMessage = "Nag-lalogin...";
     });
 
     try {
@@ -70,6 +98,7 @@ class _LoginScreenState extends State<LoginScreen> {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 201 || response.statusCode == 200) {
+        _retryCount = 0;
         final userData = data['user'];
         final String role = userData['role'];
         final String token = data['access_token'];
@@ -122,9 +151,28 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       } else {
         if (!mounted) return;
+        String errorMsg = data['message'] ?? 'Maling Username o Password!';
+        
+        if (errorMsg.contains("SERVER_SLEEPING")) {
+          _retryCount++;
+          if (_retryCount < 6) {
+            for (int i = 5; i > 0; i--) {
+              if (!mounted) return;
+              setState(() {
+                _statusMessage = "Ginigising ang server, susubukan muli sa loob ng $i segundo... (Attempt $_retryCount/5)";
+              });
+              await Future.delayed(const Duration(seconds: 1));
+            }
+            _handleLogin(); // Auto-retry
+            return;
+          } else {
+            errorMsg = "Hindi magising ang server. Pakisubukang muli mamaya.";
+          }
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(data['message'] ?? 'Maling Username o Password!'),
+            content: Text(errorMsg.replaceAll("SERVER_SLEEPING: ", "")),
           ),
         );
       }
@@ -137,6 +185,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
+          _statusMessage = "";
         });
       }
     }
@@ -193,8 +242,19 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
+                if (_statusMessage.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Column(
+                      children: [
+                        Text(_statusMessage, textAlign: TextAlign.center, style: const TextStyle(color: Colors.deepPurple, fontWeight: FontWeight.bold, fontSize: 13)),
+                        const SizedBox(height: 8),
+                        LinearProgressIndicator(backgroundColor: Colors.deepPurple.withOpacity(0.1)),
+                      ],
+                    ),
+                  ),
                 _isLoading
-                    ? const CircularProgressIndicator()
+                    ? (_statusMessage.isEmpty ? const CircularProgressIndicator() : const SizedBox.shrink())
                     : ElevatedButton(
                         onPressed: _handleLogin,
                         style: ElevatedButton.styleFrom(
@@ -223,3 +283,4 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
+

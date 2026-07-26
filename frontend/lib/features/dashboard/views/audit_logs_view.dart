@@ -29,20 +29,19 @@ class _AuditLogsViewState extends State<AuditLogsView> {
         if (data['success']) {
           setState(() {
             _logs = data['logs'] ?? [];
-            _isLoading = false;
           });
         }
       } else if (response.statusCode == 403) {
         if (mounted) {
-          setState(() => _isLoading = false);
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Forbidden: Admin access only.'), backgroundColor: Colors.red));
         }
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 

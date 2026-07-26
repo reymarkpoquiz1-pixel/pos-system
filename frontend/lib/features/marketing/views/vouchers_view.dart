@@ -29,15 +29,16 @@ class _VouchersViewState extends State<VouchersView> {
         if (data['success']) {
           setState(() {
             _vouchers = data['vouchers'] ?? [];
-            _isLoading = false;
           });
         }
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isLoading = false);
+        debugPrint('Vouchers Fetch Error: $e');
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 

@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos/core/services/api_service.dart';
+import 'package:pos/core/services/database_helper.dart';
 import 'package:pos/core/services/background_removal_service.dart';
 import 'package:pos/core/constants/config.dart';
 import 'package:pos/core/widgets/dashboard_widgets.dart';
@@ -19,6 +20,7 @@ class ProductsView extends StatefulWidget {
   final VoidCallback onRefresh;
   final bool isMobile;
   final int? userId;
+  final bool isLoading;
 
   const ProductsView({
     super.key,
@@ -26,6 +28,7 @@ class ProductsView extends StatefulWidget {
     required this.onRefresh,
     required this.isMobile,
     this.userId,
+    this.isLoading = false,
   });
 
   @override
@@ -76,9 +79,13 @@ class _ProductsViewState extends State<ProductsView> {
   String _selectedCategoryName = 'Select Category';
   List<dynamic> _categories = [];
 
+  List<dynamic> _products = [];
+
   @override
   void initState() {
     super.initState();
+    _products = widget.productsList;
+    _loadLocalProducts();
     _fetchCategories();
     _searchController.addListener(() {
       setState(() {
@@ -88,6 +95,31 @@ class _ProductsViewState extends State<ProductsView> {
     
     _costPriceController.addListener(_calculateMargins);
     _sellingPriceController.addListener(_calculateMargins);
+  }
+
+  Future<void> _loadLocalProducts() async {
+    if (_products.isNotEmpty) return;
+    
+    try {
+      final local = await DatabaseHelper.instance.getLocalProducts();
+      if (local.isNotEmpty && mounted) {
+        setState(() {
+          _products = local;
+        });
+      }
+    } catch (e) {
+      debugPrint('Local Product Error: $e');
+    }
+  }
+
+  @override
+  void didUpdateWidget(ProductsView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.productsList != oldWidget.productsList) {
+      setState(() {
+        _products = widget.productsList;
+      });
+    }
   }
 
   void _updateTotalStockFromVariants() {
@@ -275,7 +307,7 @@ class _ProductsViewState extends State<ProductsView> {
   }
 
   List<dynamic> get _filteredProducts {
-    return widget.productsList.where((prod) {
+    return _products.where((prod) {
       final status = (prod['status'] ?? 'Active').toString();
       if (status == 'Archived') return false;
       
@@ -335,8 +367,11 @@ class _ProductsViewState extends State<ProductsView> {
                             mainAxisSpacing: 20,
                             childAspectRatio: aspectRatio,
                           ),
-                          itemCount: _filteredProducts.length,
+                          itemCount: (widget.isLoading && _filteredProducts.isEmpty) ? 10 : _filteredProducts.length,
                           itemBuilder: (context, index) {
+                            if (widget.isLoading && _filteredProducts.isEmpty) {
+                              return SkeletonLoader(width: double.infinity, height: double.infinity, borderRadius: 16);
+                            }
                             return ProductGridCard(
                               product: _filteredProducts[index],
                               onTap: () => _selectProduct(_filteredProducts[index]),

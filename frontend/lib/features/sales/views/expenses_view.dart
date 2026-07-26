@@ -29,15 +29,16 @@ class _ExpensesViewState extends State<ExpensesView> {
         if (data['success']) {
           setState(() {
             _expenses = data['expenses'] ?? [];
-            _isLoading = false;
           });
         }
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isLoading = false);
+        debugPrint('Expenses Fetch Error: $e');
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 

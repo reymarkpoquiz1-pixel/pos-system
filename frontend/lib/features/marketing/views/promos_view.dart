@@ -30,15 +30,16 @@ class _PromosViewState extends State<PromosView> {
         if (data['success']) {
           setState(() {
             _promos = data['promos'] ?? [];
-            _isLoading = false;
           });
         }
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isLoading = false);
+        debugPrint('Promos Fetch Error: $e');
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 

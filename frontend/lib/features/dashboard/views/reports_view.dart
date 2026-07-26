@@ -74,14 +74,15 @@ class _ReportsViewState extends State<ReportsView> {
               titleStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
             )).toList();
           }
-          _isLoading = false;
         });
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        debugPrint('Report Fetch Error: $e');
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error loading reports: $e')));
       }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 

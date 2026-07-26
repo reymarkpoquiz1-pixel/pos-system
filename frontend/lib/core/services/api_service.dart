@@ -23,7 +23,7 @@ class ApiService {
         Uri.parse('$baseUrl/$endpoint'),
         headers: headers,
         body: jsonEncode(body),
-      ).timeout(const Duration(seconds: 30));
+      ).timeout(const Duration(seconds: 10)); // Reduced from 30s
 
       if (response.statusCode == 401) {
         bool refreshed = await _attemptTokenRefresh();
@@ -41,7 +41,11 @@ class ApiService {
       return response;
     } catch (e) {
       debugPrint("API POST ERROR ($endpoint): $e");
-      return http.Response(jsonEncode({"success": false, "message": "Connection Error: $e"}), 503);
+      String message = "Connection Error: $e";
+      if (e.toString().contains('Connection refused') || e.toString().contains('SocketException') || e.toString().contains('TimeoutException')) {
+        message = "SERVER_SLEEPING: Ang server ay kasalukuyang natutulog o mabagal. Sinusubukan ulit...";
+      }
+      return http.Response(jsonEncode({"success": false, "message": message}), 503);
     }
   }
 
@@ -51,7 +55,7 @@ class ApiService {
       var response = await http.get(
         Uri.parse('$baseUrl/$endpoint'),
         headers: headers,
-      ).timeout(const Duration(seconds: 30));
+      ).timeout(const Duration(seconds: 7)); // Aggressive timeout for reads
 
       if (response.statusCode == 401) {
         bool refreshed = await _attemptTokenRefresh();
@@ -77,6 +81,12 @@ class ApiService {
       return response;
     } catch (e) {
       debugPrint("API GET ERROR ($endpoint): $e");
+      
+      String message = "Connection Error: $e";
+      if (e.toString().contains('Connection refused') || e.toString().contains('SocketException') || e.toString().contains('TimeoutException')) {
+        message = "SERVER_SLEEPING: Ginigising ang server...";
+      }
+
       // If offline and requesting products, try local storage
       if (endpoint.contains('products/get_products')) {
         final localProds = await DatabaseHelper.instance.getLocalProducts();
@@ -84,7 +94,7 @@ class ApiService {
           return http.Response(jsonEncode({"success": true, "products": localProds}), 200);
         }
       }
-      return http.Response(jsonEncode({"success": false, "message": "Connection Error: $e"}), 503);
+      return http.Response(jsonEncode({"success": false, "message": message}), 503);
     }
   }
 

@@ -13,6 +13,7 @@ class DashboardView extends StatelessWidget {
   final Function(String) onMenuSelect;
   final BuildContext context;
   final Map<String, dynamic>? storeSettings;
+  final bool isLoading;
 
   const DashboardView({
     super.key,
@@ -25,6 +26,7 @@ class DashboardView extends StatelessWidget {
     required this.onMenuSelect,
     required this.context,
     this.storeSettings,
+    this.isLoading = false,
   });
 
   static const Color textDark = Color(0xFF1E293B);
@@ -210,15 +212,17 @@ class DashboardView extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  '₱${dashboardStats['total_sales_today']}',
-                  style: const TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w900,
-                    color: textDark,
-                    letterSpacing: -0.5,
-                  ),
-                ),
+                isLoading && dashboardStats['total_sales_today'] == '0.00'
+                  ? const SkeletonLoader(width: 140, height: 32, margin: EdgeInsets.only(top: 4))
+                  : Text(
+                      '₱${dashboardStats['total_sales_today']}',
+                      style: const TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                        color: textDark,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
                 const SizedBox(height: 10),
                 Container(width: 100, height: 1, color: Colors.black12),
                 const SizedBox(height: 10),
@@ -226,14 +230,16 @@ class DashboardView extends StatelessWidget {
                   'New Customers',
                   style: TextStyle(color: Colors.black54, fontSize: 12),
                 ),
-                Text(
-                  '${dashboardStats['new_customers_today']}',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: textDark,
-                  ),
-                ),
+                isLoading && dashboardStats['new_customers_today'] == '0'
+                  ? const SkeletonLoader(width: 40, height: 22, margin: EdgeInsets.only(top: 4))
+                  : Text(
+                      '${dashboardStats['new_customers_today']}',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: textDark,
+                      ),
+                    ),
               ],
             ),
           ),
@@ -259,10 +265,12 @@ class DashboardView extends StatelessWidget {
               const Icon(Icons.payments_outlined, color: Colors.blue, size: 14),
             ],
           ),
-          Text(
-            '₱${dashboardStats['total_revenue_month']}',
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: textDark),
-          ),
+          isLoading && dashboardStats['total_revenue_month'] == '0.00'
+            ? const SkeletonLoader(width: 120, height: 24, margin: EdgeInsets.only(top: 4))
+            : Text(
+                '₱${dashboardStats['total_revenue_month']}',
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: textDark),
+              ),
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -274,10 +282,12 @@ class DashboardView extends StatelessWidget {
               const Icon(Icons.trending_up, color: Colors.green, size: 14),
             ],
           ),
-          Text(
-            '₱${dashboardStats['total_profit_month'] ?? '0.00'}',
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.green),
-          ),
+          isLoading && (dashboardStats['total_profit_month'] == null || dashboardStats['total_profit_month'] == '0.00')
+            ? const SkeletonLoader(width: 120, height: 24, margin: EdgeInsets.only(top: 4))
+            : Text(
+                '₱${dashboardStats['total_profit_month'] ?? '0.00'}',
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.green),
+              ),
         ],
       ),
     );
@@ -326,7 +336,14 @@ class DashboardView extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 16),
-              if (physicalTrans.isEmpty)
+              if (isLoading && physicalTrans.isEmpty)
+                Column(
+                  children: List.generate(3, (index) => const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8.0),
+                    child: SkeletonLoader(width: double.infinity, height: 40),
+                  )),
+                )
+              else if (physicalTrans.isEmpty)
                 const Center(child: Padding(
                   padding: EdgeInsets.all(20.0),
                   child: Text('No physical sales found.', style: TextStyle(color: Colors.grey)),
@@ -366,7 +383,14 @@ class DashboardView extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 16),
-              if (onlineTrans.isEmpty)
+              if (isLoading && onlineTrans.isEmpty)
+                Column(
+                  children: List.generate(3, (index) => const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8.0),
+                    child: SkeletonLoader(width: double.infinity, height: 40),
+                  )),
+                )
+              else if (onlineTrans.isEmpty)
                 const Center(child: Padding(
                   padding: EdgeInsets.all(20.0),
                   child: Text('No online orders found.', style: TextStyle(color: Colors.grey)),
@@ -502,7 +526,29 @@ class DashboardView extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          if (displayProducts.isEmpty)
+          if (isLoading && displayProducts.isEmpty)
+            Column(
+              children: List.generate(3, (index) => Padding(
+                padding: const EdgeInsets.only(bottom: 12.0),
+                child: Row(
+                  children: [
+                    const SkeletonLoader(width: 48, height: 48, borderRadius: 10),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SkeletonLoader(width: 120, height: 16),
+                          const SizedBox(height: 6),
+                          const SkeletonLoader(width: 60, height: 12),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              )),
+            )
+          else if (displayProducts.isEmpty)
             const Text('Walang data ng benta.', style: TextStyle(fontSize: 12, color: Colors.grey))
           else
             ...displayProducts.map((prod) {

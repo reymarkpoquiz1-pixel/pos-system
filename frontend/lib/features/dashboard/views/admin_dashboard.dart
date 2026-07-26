@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pos/core/services/api_service.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 import 'package:pos/core/constants/config.dart';
@@ -40,13 +41,35 @@ class _AdminDashboardState extends State<AdminDashboard> {
   String? _logoUrl;
   String? _profileImageUrl;
   bool _isLoading = true;
+  bool _isSyncing = false;
   bool _isSidebarExpanded = true;
 
   @override
   void initState() {
     super.initState();
     _storeName = widget.initialStoreName;
-    _fetchAllData();
+    _loadCachedData().then((_) => _fetchAllData());
+  }
+
+  Future<void> _loadCachedData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? cachedData = prefs.getString('admin_dashboard_cache');
+      if (cachedData != null) {
+        final data = json.decode(cachedData);
+        setState(() {
+          _dashboardStats = data['stats'] ?? _dashboardStats;
+          _productsList = data['products'] ?? [];
+          _categoriesList = data['categories'] ?? [];
+          _employeesList = data['employees'] ?? [];
+          _customersList = data['customers'] ?? [];
+          _transactionsList = data['transactions'] ?? [];
+          _isLoading = false; // Show cached data immediately
+        });
+      }
+    } catch (e) {
+      debugPrint('Cache Load Error: $e');
+    }
   }
 
   Map<String, dynamic> _dashboardStats = {
@@ -77,17 +100,30 @@ class _AdminDashboardState extends State<AdminDashboard> {
   static const Color textDark = Color(0xFF1C1B1F);
 
   Future<void> _fetchAllData() async {
-    setState(() => _isLoading = true);
+    // Only show full loading if we don't have ANY data at all
+    bool hasAnyData = _productsList.isNotEmpty || _dashboardStats['total_sales_today'] != '0.00';
+    
+    if (!hasAnyData) {
+      setState(() => _isLoading = true);
+    } else {
+      setState(() => _isSyncing = true);
+    }
+    
     try {
       final response = await ApiService.get('admin/get_initial_data?user_id=${widget.userId}&branch_id=$_selectedBranchId');
 
       if (response.statusCode != 200) {
         debugPrint('HTTP Error ${response.statusCode}: ${response.body}');
         if (mounted) {
-          setState(() => _isLoading = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('HTTP Error ${response.statusCode}: Failed to load initial data'), backgroundColor: Colors.red),
-          );
+          setState(() {
+            _isLoading = false;
+            _isSyncing = false;
+          });
+          if (!hasAnyData) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('HTTP Error ${response.statusCode}: Failed to load data'), backgroundColor: Colors.red),
+            );
+          }
         }
         return;
       }
@@ -97,6 +133,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
       final data = json.decode(response.body);
 
       if (data['success'] == true) {
+        // Cache the data
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('admin_dashboard_cache', response.body);
+
         setState(() {
           // Null-safe assignments
           if (data['store_settings'] != null) {
@@ -120,51 +160,59 @@ class _AdminDashboardState extends State<AdminDashboard> {
           _realNotifications = data['notifications'] ?? [];
           _branches = data['branches'] ?? [];
           _isLoading = false;
+          _isSyncing = false;
         });
       } else {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Server Error: ${data['message'] ?? 'Unknown error'}'),
-            backgroundColor: Colors.orange,
-            duration: const Duration(seconds: 10),
-            action: SnackBarAction(label: 'Retry', textColor: Colors.white, onPressed: _fetchAllData),
-          ),
-        );
+        setState(() {
+          _isLoading = false;
+          _isSyncing = false;
+        });
+        if (!hasAnyData) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Server Error: ${data['message'] ?? 'Unknown error'}'),
+              backgroundColor: Colors.orange,
+              duration: const Duration(seconds: 10),
+              action: SnackBarAction(label: 'Retry', textColor: Colors.white, onPressed: _fetchAllData),
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+          _isSyncing = false;
+        });
         debugPrint('Fetch Error: $e');
 
-        // Mas detalyadong error handling
-        String errorMsg = 'Connection Error: Mangyaring i-check ang iyong internet o server.';
-        if (e is FormatException) {
-          errorMsg = 'Data Error: Nakatanggap ng invalid response mula sa server.';
-        }
+        if (!hasAnyData) {
+          String errorMsg = 'Connection Error: Mangyaring i-check ang iyong internet o server.';
+          if (e is FormatException) {
+            errorMsg = 'Data Error: Nakatanggap ng invalid response mula sa server.';
+          }
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMsg),
-            backgroundColor: Colors.red,
-            action: SnackBarAction(
-              label: 'Details',
-              textColor: Colors.white,
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    title: const Text('Error Details'),
-                    content: SingleChildScrollView(
-                      child: Text(e.toString()),
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMsg),
+              backgroundColor: Colors.red,
+              action: SnackBarAction(
+                label: 'Details',
+                textColor: Colors.white,
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Error Details'),
+                      content: SingleChildScrollView(child: Text(e.toString())),
+                      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))],
                     ),
-                    actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))],
-                  ),
-                );
-              }
+                  );
+                }
+              ),
             ),
-          ),
-        );
+          );
+        }
       }
     }
   }
@@ -399,38 +447,38 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   children: [
                     if (!isMobile) _buildTopNavbar(),
                     Expanded(
-                      child: _isLoading
-                          ? const Center(child: CircularProgressIndicator())
-                          : IndexedStack(
-                              index: _getMenuIndex(_selectedMenu),
-                              children: [
-                                DashboardView(
-                                  dashboardStats: _dashboardStats,
-                                  chartData: _chartData,
-                                  productsList: _productsList,
-                                  topSellingProducts: _topSellingProducts,
-                                  transactionsList: _transactionsList,
-                                  isMobile: isMobile,
-                                  onMenuSelect: (menu) => setState(() => _selectedMenu = menu),
-                                  context: context,
-                                  storeSettings: _storeSettings,
-                                ),
-                                ProductsView(
-                                  productsList: _productsList,
-                                  onRefresh: _fetchAllData,
-                                  isMobile: isMobile,
-                                  userId: widget.userId,
-                                ),
-                                CategoriesView(
-                                  categoriesList: _categoriesList,
-                                  onRefresh: _fetchAllData,
-                                  isMobile: isMobile
-                                ),
-                                InventoryView(
-                                  productsList: _productsList,
-                                  userId: widget.userId,
-                                  onRefresh: _fetchAllData,
-                                ),
+                      child: IndexedStack(
+                        index: _getMenuIndex(_selectedMenu),
+                        children: [
+                          DashboardView(
+                            dashboardStats: _dashboardStats,
+                            chartData: _chartData,
+                            productsList: _productsList,
+                            topSellingProducts: _topSellingProducts,
+                            transactionsList: _transactionsList,
+                            isMobile: isMobile,
+                            onMenuSelect: (menu) => setState(() => _selectedMenu = menu),
+                            context: context,
+                            storeSettings: _storeSettings,
+                            isLoading: _isLoading,
+                          ),
+                          ProductsView(
+                            productsList: _productsList,
+                            onRefresh: _fetchAllData,
+                            isMobile: isMobile,
+                            userId: widget.userId,
+                            isLoading: _isLoading,
+                          ),
+                          CategoriesView(
+                            categoriesList: _categoriesList,
+                            onRefresh: _fetchAllData,
+                            isMobile: isMobile
+                          ),
+                          InventoryView(
+                            productsList: _productsList,
+                            userId: widget.userId,
+                            onRefresh: _fetchAllData,
+                          ),
                                 EmployeesView(
                                   employeesList: _employeesList,
                                   isMobile: isMobile,
@@ -624,7 +672,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           ..._branches.map((b) => DropdownMenuItem(
                             value: int.tryParse(b['id'].toString()) ?? 0,
                             child: Text(b['name'], style: const TextStyle(fontSize: 13))
-                          )).toList(),
+                          )),
                         ],
                         onChanged: (val) {
                           if (val != null) {
@@ -641,6 +689,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (_isSyncing)
+                const Padding(
+                  padding: EdgeInsets.only(right: 8.0),
+                  child: SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: activeMenuBg),
+                  ),
+                ),
               IconButton(icon: const Icon(Icons.refresh, color: textDark), onPressed: _fetchAllData),
               const SizedBox(width: 10),
               IconButton(

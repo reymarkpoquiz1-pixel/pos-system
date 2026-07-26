@@ -24,10 +24,17 @@ class _RefundsViewState extends State<RefundsView> with SingleTickerProviderStat
   }
 
   Future<void> _fetchAllRefundData() async {
-    await Future.wait([
-      _fetchRefundableOrders(),
-      _fetchRefundHistory(),
-    ]);
+    setState(() => _isLoading = true);
+    try {
+      await Future.wait([
+        _fetchRefundableOrders(),
+        _fetchRefundHistory(),
+      ]);
+    } catch (e) {
+      debugPrint('Error fetching refund data: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _fetchRefundHistory() async {
@@ -47,7 +54,6 @@ class _RefundsViewState extends State<RefundsView> with SingleTickerProviderStat
   }
 
   Future<void> _fetchRefundableOrders() async {
-    setState(() => _isLoading = true);
     try {
       final response = await ApiService.get('sales/get_refundable_orders');
       if (response.statusCode == 200) {
@@ -55,15 +61,11 @@ class _RefundsViewState extends State<RefundsView> with SingleTickerProviderStat
         if (data['success']) {
           setState(() {
             _refundableOrders = data['orders'] ?? [];
-            _isLoading = false;
           });
         }
       }
     } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-      }
+      debugPrint('Error fetching refundable orders: $e');
     }
   }
 

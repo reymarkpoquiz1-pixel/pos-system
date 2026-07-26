@@ -21,7 +21,7 @@ dependencies:
   mobile_scanner: ^7.3.0
   esc_pos_utils_plus: ^2.0.3
   connectivity_plus: ^6.0.3
-  
+
   # Para sa local database/offline storage (sqflite)
   sqflite: ^2.4.1
   path_provider: ^2.1.1

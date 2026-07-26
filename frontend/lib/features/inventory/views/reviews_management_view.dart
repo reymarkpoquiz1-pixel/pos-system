@@ -29,15 +29,16 @@ class _ReviewsManagementViewState extends State<ReviewsManagementView> {
         if (data['success']) {
           setState(() {
             _reviews = data['reviews'] ?? [];
-            _isLoading = false;
           });
         }
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isLoading = false);
+        debugPrint('Reviews Fetch Error: $e');
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
