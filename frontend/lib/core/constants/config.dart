@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io' show Platform;
 
-// Switch para sa Local Development vs Live Testing
-// I-set sa 'false' bago i-deploy sa Render para sa Live Website
-const bool isLocal = false; 
+// Switch for Local Development vs Live Testing
+// Set to 'false' before deploying to Render for the Live Website
+const bool isLocal = false;
 
 const String _liveBaseUrl = 'https://pos-system-9ucq.onrender.com';
 
@@ -14,7 +14,7 @@ String get baseUrl {
 
   // Local Development:
   if (kIsWeb) {
-    // Kung Flutter Web ang gamit, ituro sa local NestJS port 3000
+    // If using Flutter Web, point to local NestJS port 3000
     return 'http://localhost:3000';
   }
 
@@ -26,6 +26,6 @@ String get baseUrl {
   } catch (e) {
     // Fallback
   }
-  
+
   return 'http://localhost:3000';
 }
