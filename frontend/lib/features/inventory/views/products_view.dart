@@ -321,6 +321,12 @@ class _ProductsViewState extends State<ProductsView> {
 
   @override
   Widget build(BuildContext context) {
+    // FIX: Store filtered products in a local variable at the start of build 
+    // to prevent RangeError during background synchronization
+    final List<dynamic> currentFilteredProducts = _filteredProducts;
+    final int productCount = currentFilteredProducts.length;
+    final bool isSyncingInitial = widget.isLoading && productCount == 0;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF7E6E9),
       body: buildThemedBackground(
@@ -369,15 +375,19 @@ class _ProductsViewState extends State<ProductsView> {
                             mainAxisSpacing: 20,
                             childAspectRatio: aspectRatio,
                           ),
-                          itemCount: (widget.isLoading && _filteredProducts.isEmpty) ? 10 : _filteredProducts.length,
+                          itemCount: isSyncingInitial ? 10 : productCount,
                           itemBuilder: (context, index) {
-                            if (widget.isLoading && _filteredProducts.isEmpty) {
+                            if (isSyncingInitial) {
                               return SkeletonLoader(width: double.infinity, height: double.infinity, borderRadius: 16);
                             }
+                            
+                            // Bounds check for extra safety
+                            if (index >= productCount) return const SizedBox.shrink();
+
                             return ProductGridCard(
-                              key: ValueKey(_filteredProducts[index]['id']?.toString() ?? index.toString()),
-                              product: _filteredProducts[index],
-                              onTap: () => _selectProduct(_filteredProducts[index]),
+                              key: ValueKey(currentFilteredProducts[index]['id']?.toString() ?? index.toString()),
+                              product: currentFilteredProducts[index],
+                              onTap: () => _selectProduct(currentFilteredProducts[index]),
                             );
                           },
                         ),
@@ -821,7 +831,12 @@ class _ProductsViewState extends State<ProductsView> {
 
   Future<void> _pickImage() async {
     try {
-      final List<XFile> images = await _picker.pickMultiImage();
+      // Added maxWidth and imageQuality for massive upload speed boost
+      final List<XFile> images = await _picker.pickMultiImage(
+        maxWidth: 800,
+        imageQuality: 85,
+      );
+      
       if (images.isNotEmpty) {
         int remainingSlots = 5 - (_selectedImages.length + _serverImages.length);
         if (remainingSlots <= 0) {
@@ -921,8 +936,14 @@ class _ProductsViewState extends State<ProductsView> {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Product saved successfully!'), backgroundColor: Colors.green));
         
+        // Prepare local preview data for instant display
+        var productData = data['data'];
+        if (_selectedImages.isNotEmpty) {
+          productData['local_image_path'] = _selectedImages[0].path;
+        }
+
         if (widget.onProductUpdated != null) {
-          widget.onProductUpdated!(data['data']);
+          widget.onProductUpdated!(productData);
         }
 
         _clearForm();

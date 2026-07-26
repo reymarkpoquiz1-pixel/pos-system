@@ -1,3 +1,5 @@
+import 'dart:io' show File;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:pos/core/constants/config.dart';
@@ -89,23 +91,22 @@ class _ProductGridCardState extends State<ProductGridCard> {
 
   Widget _buildVariantsSummary(dynamic variantsData, String styleLabel, double availableWidth) {
     try {
+      if (variantsData == null) return const SizedBox.shrink();
       List<dynamic> variants = (variantsData is String) ? json.decode(variantsData) : variantsData;
 
       Set<String> sizes = {};
       List<Color> colorDots = [];
 
-      if (variants != null) {
-        for (var v in variants) {
-          if (v['color_hex'] != null) {
-            try {
-              String hex = v['color_hex'].toString().replaceFirst('#', '');
-              if (hex.length == 6) hex = 'FF$hex';
-              colorDots.add(Color(int.parse(hex, radix: 16)));
-            } catch (_) {}
-          }
-          if (v['size'] != null && v['size'].toString().isNotEmpty) {
-            sizes.add(v['size'].toString());
-          }
+      for (var v in variants) {
+        if (v['color_hex'] != null) {
+          try {
+            String hex = v['color_hex'].toString().replaceFirst('#', '');
+            if (hex.length == 6) hex = 'FF$hex';
+            colorDots.add(Color(int.parse(hex, radix: 16)));
+          } catch (_) {}
+        }
+        if (v['size'] != null && v['size'].toString().isNotEmpty) {
+          sizes.add(v['size'].toString());
         }
       }
 
@@ -175,6 +176,39 @@ class _ProductGridCardState extends State<ProductGridCard> {
     }
   }
 
+  Widget _buildMainImage(Map<String, dynamic> prod, String displayImg) {
+    // 1. Check for local preview path first (Optimistic UI)
+    final String? localPath = prod['local_image_path'];
+    if (localPath != null && localPath.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: kIsWeb 
+          ? Image.network(localPath, fit: BoxFit.contain)
+          : Image.file(File(localPath), fit: BoxFit.contain),
+      );
+    }
+
+    // 2. Fallback to Network Image
+    if (displayImg.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Image.network(
+          _getImageUrl(displayImg),
+          width: double.infinity,
+          height: double.infinity,
+          fit: BoxFit.contain,
+          // Optimization: Limit cache size to save RAM
+          cacheWidth: 400,
+          errorBuilder: (context, error, stackTrace) {
+            return const Icon(Icons.image_outlined, color: Colors.grey, size: 36);
+          },
+        ),
+      );
+    }
+
+    return const Center(child: Icon(Icons.image_outlined, color: Colors.grey, size: 36));
+  }
+
   @override
   Widget build(BuildContext context) {
     final prod = widget.product;
@@ -217,20 +251,7 @@ class _ProductGridCardState extends State<ProductGridCard> {
                         color: const Color(0xFFFBF4F6),
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: displayImg.isNotEmpty
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(16),
-                              child: Image.network(
-                                _getImageUrl(displayImg),
-                                width: double.infinity,
-                                height: double.infinity,
-                                fit: BoxFit.contain, // Show full item without cropping
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Icon(Icons.image_outlined, color: Colors.grey, size: 36);
-                                },
-                              ),
-                            )
-                          : const Center(child: Icon(Icons.image_outlined, color: Colors.grey, size: 36)),
+                      child: _buildMainImage(prod, displayImg),
                     ),
                     if (isOutOfStock || isLowStock)
                       Positioned(
