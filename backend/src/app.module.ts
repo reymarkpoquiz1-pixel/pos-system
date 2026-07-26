@@ -43,9 +43,11 @@ import { CloudinaryModule } from './cloudinary/cloudinary.module';
         database: configService.get<string>('DB_DATABASE'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         synchronize: true, // Auto-create tables (Huwag gamitin sa production, pero ok sa development)
-        ssl: configService.get<string>('DB_HOST') !== 'localhost' && configService.get<string>('DB_HOST') !== '127.0.0.1'
-          ? { rejectUnauthorized: false }
-          : false,
+        ssl:
+          configService.get<string>('DB_HOST') !== 'localhost' &&
+          configService.get<string>('DB_HOST') !== '127.0.0.1'
+            ? { rejectUnauthorized: false }
+            : false,
       }),
       inject: [ConfigService],
     }),

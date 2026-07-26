@@ -32,7 +32,11 @@ export class AdminService {
     const endOfDay = new Date();
     endOfDay.setHours(23, 59, 59, 999);
 
-    const firstDayOfMonth = new Date(startOfDay.getFullYear(), startOfDay.getMonth(), 1);
+    const firstDayOfMonth = new Date(
+      startOfDay.getFullYear(),
+      startOfDay.getMonth(),
+      1,
+    );
 
     // Run basic counts and single-table summaries in parallel
     const [
@@ -54,7 +58,10 @@ export class AdminService {
       this.saleRepository
         .createQueryBuilder('sale')
         .select('SUM(sale.finalAmount)', 'total')
-        .where('sale.transactionDate BETWEEN :start AND :end', { start: startOfDay, end: endOfDay })
+        .where('sale.transactionDate BETWEEN :start AND :end', {
+          start: startOfDay,
+          end: endOfDay,
+        })
         .getRawOne(),
 
       // 2. Today's Order Count
@@ -105,7 +112,10 @@ export class AdminService {
         .createQueryBuilder('sale')
         .select('EXTRACT(HOUR FROM sale.transactionDate)', 'hour')
         .addSelect('SUM(sale.finalAmount)', 'total')
-        .where('sale.transactionDate BETWEEN :start AND :end', { start: startOfDay, end: endOfDay })
+        .where('sale.transactionDate BETWEEN :start AND :end', {
+          start: startOfDay,
+          end: endOfDay,
+        })
         .groupBy('hour')
         .orderBy('hour', 'ASC')
         .getRawMany(),
@@ -115,7 +125,10 @@ export class AdminService {
         .createQueryBuilder('sale')
         .select('sale.paymentMethod', 'payment_method')
         .addSelect('COUNT(*)', 'count')
-        .where('sale.transactionDate BETWEEN :start AND :end', { start: startOfDay, end: endOfDay })
+        .where('sale.transactionDate BETWEEN :start AND :end', {
+          start: startOfDay,
+          end: endOfDay,
+        })
         .groupBy('sale.paymentMethod')
         .getRawMany(),
 
@@ -131,7 +144,10 @@ export class AdminService {
         .from(Sale, 'sale')
         .innerJoin('sale_items', 'item', 'item.sale_id = sale.id')
         .leftJoin('products', 'p', 'p.id = item.product_id')
-        .where('sale.transactionDate BETWEEN :start AND :end', { start: firstDayOfMonth, end: endOfDay })
+        .where('sale.transactionDate BETWEEN :start AND :end', {
+          start: firstDayOfMonth,
+          end: endOfDay,
+        })
         .getRawOne(),
     ]);
 
@@ -186,7 +202,10 @@ export class AdminService {
         active_employees: activeEmployeesCount,
       },
       charts: {
-        hourly_sales: hourlySalesRaw.map((h) => ({ h: h.hour, total: h.total })),
+        hourly_sales: hourlySalesRaw.map((h) => ({
+          h: h.hour,
+          total: h.total,
+        })),
         payment_methods: paymentMethodsRaw.map((p) => ({
           payment_method: p.payment_method,
           count: p.count,

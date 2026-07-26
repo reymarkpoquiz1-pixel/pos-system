@@ -41,7 +41,9 @@ export class SettingsService implements OnModuleInit {
   }
 
   async getStoreSettings() {
-    const settings = await this.storeSettingRepository.findOne({ where: { id: 1 } });
+    const settings = await this.storeSettingRepository.findOne({
+      where: { id: 1 },
+    });
     if (!settings) return null;
 
     return {

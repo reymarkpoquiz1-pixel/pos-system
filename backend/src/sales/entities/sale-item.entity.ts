@@ -24,7 +24,13 @@ export class SaleItem {
   @Column()
   quantity: number;
 
-  @Column({ name: 'purchase_price', type: 'decimal', precision: 10, scale: 2, default: 0 })
+  @Column({
+    name: 'purchase_price',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    default: 0,
+  })
   purchasePrice: number;
 
   @Column({ name: 'unit_price', type: 'decimal', precision: 10, scale: 2 })

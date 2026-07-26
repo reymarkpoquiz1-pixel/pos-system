@@ -59,9 +59,12 @@ export class ProductsService {
 
       const pPrice = cost_price || purchase_price;
       if (pPrice !== undefined) product.purchasePrice = Number(pPrice);
-      if (selling_price !== undefined) product.sellingPrice = Number(selling_price);
-      if (stock_quantity !== undefined) product.stockQuantity = Number(stock_quantity);
-      if (reorder_level !== undefined) product.reorderLevel = Number(reorder_level);
+      if (selling_price !== undefined)
+        product.sellingPrice = Number(selling_price);
+      if (stock_quantity !== undefined)
+        product.stockQuantity = Number(stock_quantity);
+      if (reorder_level !== undefined)
+        product.reorderLevel = Number(reorder_level);
       if (category_id) product.categoryId = Number(category_id);
 
       // JSON fields
@@ -100,7 +103,7 @@ export class ProductsService {
 
       return {
         success: true,
-        data: fullProduct ? this.mapProduct(fullProduct) : null
+        data: fullProduct ? this.mapProduct(fullProduct) : null,
       };
     });
   }

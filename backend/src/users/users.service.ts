@@ -42,7 +42,7 @@ export class UsersService implements OnModuleInit {
   }
 
   async create(userData: Partial<User>): Promise<User> {
-    const hashedPassword = await bcrypt.hash(userData.password!, 10);
+    const hashedPassword = await bcrypt.hash(userData.password, 10);
     const user = this.usersRepository.create({
       ...userData,
       password: hashedPassword,

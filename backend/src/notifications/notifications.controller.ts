@@ -7,7 +7,8 @@ export class NotificationsController {
 
   @Get('get_notifications')
   async getNotifications() {
-    const notifications = await this.notificationsService.getLatestNotifications();
+    const notifications =
+      await this.notificationsService.getLatestNotifications();
     return { success: true, notifications };
   }
 }

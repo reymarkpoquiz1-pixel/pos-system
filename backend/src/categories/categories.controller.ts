@@ -48,7 +48,8 @@ export class CategoriesController {
   @Get('get_category_history')
   async getCategoryHistory(@Req() req: any) {
     const categoryId = req.query.category_id;
-    const history = await this.categoriesService.getCategoryHistory(+categoryId);
+    const history =
+      await this.categoriesService.getCategoryHistory(+categoryId);
     return {
       success: true,
       history,

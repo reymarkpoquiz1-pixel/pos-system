@@ -38,9 +38,10 @@ export class ProductsController {
 
     if (data.existing_images) {
       try {
-        finalImages = typeof data.existing_images === 'string'
-          ? JSON.parse(data.existing_images)
-          : data.existing_images;
+        finalImages =
+          typeof data.existing_images === 'string'
+            ? JSON.parse(data.existing_images)
+            : data.existing_images;
       } catch (e) {
         finalImages = [];
       }
@@ -48,9 +49,11 @@ export class ProductsController {
 
     if (files && files.length > 0) {
       // Upload each file to Cloudinary
-      const uploadPromises = files.map(file => this.cloudinaryService.uploadFile(file));
+      const uploadPromises = files.map((file) =>
+        this.cloudinaryService.uploadFile(file),
+      );
       const results = await Promise.all(uploadPromises);
-      const newFileUrls = results.map(res => res.secure_url);
+      const newFileUrls = results.map((res) => res.secure_url);
       finalImages = [...finalImages, ...newFileUrls];
     }
 
