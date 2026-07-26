@@ -1,6 +1,0 @@
-- `[ ]` Root Cleanup and Git Optimization
-    - `[ ]` Create root `.gitignore`
-    - `[ ]` Remove `.artifacts` from Git tracking
-    - `[ ]` Remove `android/.kotlin` from Git tracking
-    - `[ ]` Commit and Push changes
-- `[ ]` Explain Sync process to the user
