@@ -1,22 +1,21 @@
-# Implementation Plan - Advanced Magic Clean Fix (Gradio 4 Compatibility)
+# Implementation Plan - Precision Magic Clean Fix (Bria 2.0 Compatibility)
 
-This plan upgrades the Magic Clean service to handle the more complex API requirements of Gradio 4 on Hugging Face, specifically targeting the "404 Not Found" and "Payload mismatch" issues.
+This plan fine-tunes the Magic Clean service to match the specific requirements of the Bria RMBG 2.0 AI space, which uses specialized endpoints and is stricter with payload formats.
 
 ## Proposed Changes
 
 ### Frontend Service
 
 #### [MODIFY] [background_removal_service.dart](file:///C:/pos-all-in-one/frontend/lib/core/services/background_removal_service.dart)
-- **Endpoint Expansion**: Add `/api/predict` (no prefix) and `/gradio_api/api/predict` to the search list.
-- **Dual Payload Strategy**:
-    - Attempt 1: Modern Gradio `FileData` object format.
-    - Attempt 2: Simplified array format used by some specific space deployments.
-- **Extended Timeouts**: Increase timeout to 60 seconds to allow cold-start spaces to respond.
-- **Enhanced Debugging**: Log the specific URL and response body for every failed attempt to pinpoint the exact failure point.
+- **Targeted Endpoints**: Add `/api/png`, `/gradio_api/api/png`, and `/gradio_api/call/png` to the discovery list.
+- **Payload Refinement**:
+    - Ensure the Base64 data includes the proper MIME type.
+    - Implement a specific "fn_index" or "api_name" if needed based on common Gradio 4 patterns.
+- **Improved Error Catching**: Capture and display the server's specific error message if it's not a 200/404 (to help diagnose if it's a "File Too Large" issue).
 
 ## Verification Plan
 
 ### Manual Verification
-1. Run `sync_frontend.bat` locally to generate the new JS build.
+1. Run `sync_frontend.bat` locally.
 2. Push to GitHub.
-3. Observe browser console logs or screen errors. If it still fails, the error message will now include the specific URL that failed, which will help us target the exact server.
+3. Test Magic Clean with a standard product image.

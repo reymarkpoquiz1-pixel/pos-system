@@ -1,31 +1,22 @@
-# Walkthrough - Advanced Magic Clean Fix
+# Walkthrough - Final Precision Magic Clean Fix
 
-This update implements a highly robust fallback system for the Magic Clean (Background Removal) feature to handle recent API changes in Hugging Face spaces.
+This update adds specialized support for Bria RMBG 2.0, which uses specific API endpoints (`/png`) and requires more detailed error handling.
 
 ## Changes Made
 
-### 1. Smart Endpoint Discovery
-Modified [background_removal_service.dart](file:///C:/pos-all-in-one/frontend/lib/core/services/background_removal_service.dart) to try multiple URL combinations. It now searches for:
-- `/api/predict`
-- `/gradio_api/api/predict`
-- `/run/predict`
-- `/gradio_api/run/predict`
+### 1. Bria 2.0 Specific Endpoints
+Modified [background_removal_service.dart](file:///C:/pos-all-in-one/frontend/lib/core/services/background_removal_service.dart) to prioritize `/api/png` and `/gradio_api/api/png`. These are the exact addresses the new Bria 2.0 AI spaces use.
 
-### 2. Dual Payload Strategy
-The service now attempts two different JSON formats for each endpoint:
-- **Gradio 4 (FileData)**: The new standard for handling images as objects.
-- **Gradio 3 (Base64 String)**: For older or custom spaces that expect raw strings.
+### 2. Enhanced Error Diagnostics
+The app now attempts to read the "body" of the error from the AI server. If the server returns a 500 or 422 error, the app will show the specific reason (like "File too large") instead of a generic "Server Error."
 
-### 3. Smarter Error Handling
-The error messages are now descriptive. Instead of a generic "404," you will see which specific endpoint failed and why, making it much easier to identify if a specific AI server is down.
+## Next Steps for You
 
-## Next Steps
-
-1.  **Run `sync_frontend.bat`** on your computer.
-2.  **Push to GitHub**:
+1.  **I-run ang [sync_frontend.bat](file:///C:/pos-all-in-one/sync_frontend.bat)** para ma-update ang JavaScript files.
+2.  **I-push sa GitHub**:
     ```bash
     git add .
-    git commit -m "Fix: Smart Fallback AI logic for Magic Clean (fix 404)"
+    git commit -m "Fix: Bria 2.0 specialized endpoints for Magic Clean"
     git push origin master
     ```
-3.  **Wait for Render to update**.
+3.  **Subukan sa Render**. Subukan munang gumamit ng **maliit na picture** (mas mababa sa 1MB) para sigurado tayong hindi size ang problema.

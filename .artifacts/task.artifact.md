@@ -1,2 +1,3 @@
 - [x] Update `background_removal_service.dart` with advanced fallback logic
-- [ ] Inform user to sync and push
+- [x] Implement Bria 2.0 specific `/png` endpoints and error handling
+- [/] Inform user to sync and push
