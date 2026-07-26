@@ -1,3 +1,0 @@
-- [x] Update `app/build.gradle.kts` with stable NDK and SDK versions
-- [x] Remove corrupted CMake cache and build artifacts
-- [x] Provide instructions for NDK installation if needed

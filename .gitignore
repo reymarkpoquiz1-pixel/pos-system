@@ -1,0 +1,30 @@
+# POS System Global Ignores
+
+# AI Artifacts
+.artifacts/
+frontend/.artifacts/
+
+# OS Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE Files
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Build and temporary files
+**/build/
+**/node_modules/
+**/.dart_tool/
+**/.pub-cache/
+**/.pub/
+**/android/.kotlin/
+**/android/local.properties
+
+# Logs
+*.log
+flutter_*.log
