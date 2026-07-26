@@ -6,6 +6,7 @@ echo ====================================================
 :: 1. Build Flutter Web
 echo Step 1: Building Flutter Web...
 cd frontend
+call flutter clean
 call flutter build web --release
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Flutter build failed!
