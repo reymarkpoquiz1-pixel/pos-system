@@ -32,14 +32,11 @@ class BackgroundRemovalService {
 
     for (var baseUrl in _spaceUrls) {
       // Susubukan natin ang iba't ibang endpoint patterns
-      // Idinagdag ang /png dahil ito ang kailangan ng Bria 2.0
       final endpoints = [
-        '$baseUrl/api/png',
-        '$baseUrl/gradio_api/api/png',
-        '$baseUrl/api/predict',
         '$baseUrl/gradio_api/api/predict',
-        '$baseUrl/run/predict',
+        '$baseUrl/api/predict',
         '$baseUrl/gradio_api/run/predict',
+        '$baseUrl/run/predict',
       ];
 
       for (var url in endpoints) {
@@ -48,27 +45,34 @@ class BackgroundRemovalService {
         debugPrint('Magic Clean: Trying endpoint: $url');
 
         try {
-          // Susubukan muna ang FileData format (Standard Gradio 4)
-          final payload1 = {
-            "data": [
-              {
-                "path": dataUri,
-                "meta": {"_type": "gradio.FileData"}
-              }
-            ],
-            "fn_index": 0,
-            "session_hash": sessionHash
-          };
+          // Susubukan natin ang iba't ibang payload combinations
+          final List<Map<String, dynamic>> payloads = [
+            // Attempt 1: Bria 2.0 specialized (with api_name)
+            {
+              "data": [
+                {"path": dataUri, "meta": {"_type": "gradio.FileData"}}
+              ],
+              "api_name": "/png",
+              "session_hash": sessionHash
+            },
+            // Attempt 2: Bria 1.4/Legacy (Simple FileData)
+            {
+              "data": [
+                {"path": dataUri, "meta": {"_type": "gradio.FileData"}}
+              ],
+              "fn_index": 0,
+              "session_hash": sessionHash
+            },
+            // Attempt 3: Gradio 3 format (Direct Data URI string)
+            {
+              "data": [dataUri],
+              "fn_index": 0,
+              "session_hash": sessionHash
+            },
+          ];
 
-          // At ang Simple String format (Standard Gradio 3)
-          final payload2 = {
-            "data": [dataUri],
-            "fn_index": 0,
-            "session_hash": sessionHash
-          };
-
-          for (var payload in [payload1, payload2]) {
-            debugPrint('Magic Clean: Sending payload to $url');
+          for (var payload in payloads) {
+            debugPrint('Magic Clean: Sending payload to $url (api_name: ${payload['api_name']})');
             final response = await client.post(
               Uri.parse(url),
               headers: {
@@ -76,7 +80,7 @@ class BackgroundRemovalService {
                 'Accept': 'application/json',
               },
               body: jsonEncode(payload),
-            ).timeout(const Duration(seconds: 40));
+            ).timeout(const Duration(seconds: 45));
 
             if (response.statusCode == 200) {
               final data = jsonDecode(response.body);
@@ -94,17 +98,19 @@ class BackgroundRemovalService {
                 }
 
                 if (imgPath != null) {
-                  // Minsan ang path ay relative lang sa base URL
                   String fullUrl = imgPath.startsWith('http') ? imgPath : '$baseUrl/file=$imgPath';
                   
-                  // May mga spaces na gumagamit ng ibang format para sa file access
-                  if (!imgPath.startsWith('http') && !url.contains('gradio_api')) {
-                     fullUrl = '$baseUrl/file=$imgPath';
-                  } else if (!imgPath.startsWith('http')) {
-                     fullUrl = '$baseUrl/gradio_api/file=$imgPath';
+                  // Handle different file serving paths
+                  if (!imgPath.startsWith('http')) {
+                    if (url.contains('gradio_api')) {
+                       fullUrl = '$baseUrl/gradio_api/file=$imgPath';
+                    } else {
+                       fullUrl = '$baseUrl/file=$imgPath';
+                    }
                   }
 
-                  final imgRes = await http.get(Uri.parse(fullUrl)).timeout(const Duration(seconds: 20));
+                  debugPrint('Magic Clean: Fetching result from $fullUrl');
+                  final imgRes = await http.get(Uri.parse(fullUrl)).timeout(const Duration(seconds: 25));
                   
                   if (imgRes.statusCode == 200) {
                     final resultBytes = imgRes.bodyBytes;
@@ -122,21 +128,17 @@ class BackgroundRemovalService {
                 }
               }
             } else if (response.statusCode != 404) {
-               // Kung hindi 404, ibig sabihin nahanap ang server pero may payload error (422, 500, etc)
-               // Subukan naman ang susunod na payload format.
                debugPrint('Magic Clean: $url returned ${response.statusCode}');
-               
-               String errorDetail = '';
+               String errorBody = '';
                try {
-                 final errorData = jsonDecode(response.body);
-                 errorDetail = ' - ${errorData["message"] ?? errorData["error"] ?? ""}';
+                 final body = jsonDecode(response.body);
+                 errorBody = ' (${body["message"] ?? body["error"] ?? ""})';
                } catch (_) {}
-               
-               lastError = 'Server error (${response.statusCode})$errorDetail from $url';
+               lastError = 'Server error ${response.statusCode}$errorBody from $url';
             } else {
                debugPrint('Magic Clean: $url returned 404');
                lastError = 'Endpoint not found (404) at $url';
-               break; // Wag na ituloy ang payload 2 kung 404 naman ang URL
+               break; // Wag na i-loop ang payloads kung 404 ang URL
             }
           }
         } catch (e) {
