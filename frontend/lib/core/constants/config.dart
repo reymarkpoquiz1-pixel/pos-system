@@ -5,7 +5,7 @@ import 'dart:io' show Platform;
 // Set to 'false' before deploying to Render for the Live Website
 const bool isLocal = false;
 
-const String _liveBaseUrl = 'https://pos-system-9ucq.onrender.com';
+const String _liveBaseUrl = 'https://pos-system-n6zt.onrender.com';
 
 String get baseUrl {
   if (!isLocal) {
