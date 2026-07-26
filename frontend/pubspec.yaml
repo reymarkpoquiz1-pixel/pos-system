@@ -22,7 +22,7 @@ dependencies:
   esc_pos_utils_plus: ^2.0.3
   connectivity_plus: ^6.0.3
   
-  # Pwede mong iwanan o burahin muna ang sqflite kung purong online/PHP MySQL ang gagawin mo
+  # Para sa local database/offline storage (sqflite)
   sqflite: ^2.4.1
   path_provider: ^2.1.1
   path: ^1.9.0

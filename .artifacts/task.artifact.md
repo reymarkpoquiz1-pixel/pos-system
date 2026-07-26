@@ -1,3 +1,2 @@
-- [x] Create `sync_frontend.bat` local automation script
-- [x] Provide updated Render Dashboard configurations
-- [x] Verify script logic
+- [x] Update `background_removal_service.dart` with Gradio 4 compatible endpoints
+- [/] Inform user to run `sync_frontend.bat` and push to GitHub

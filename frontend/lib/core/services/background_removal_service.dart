@@ -31,8 +31,10 @@ class BackgroundRemovalService {
     String? lastError;
 
     for (var baseUrl in _spaceUrls) {
-      // Susubukan natin ang dalawang common endpoint patterns ng Gradio 4
+      // Susubukan natin ang iba't ibang endpoint patterns para sa Gradio 3 at 4
       final endpoints = [
+        '$baseUrl/gradio_api/run/predict',
+        '$baseUrl/gradio_api/api/predict',
         '$baseUrl/run/predict',
         '$baseUrl/api/predict',
       ];

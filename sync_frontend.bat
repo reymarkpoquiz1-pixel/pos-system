@@ -19,8 +19,10 @@ cd ..
 echo Step 2: Preparing backend/public folder...
 if not exist "backend\public" mkdir "backend\public"
 
-:: Using powershell for clean deletion to handle nested folders better on Windows
-powershell -Command "if (Test-Path 'backend\public\*') { Remove-Item -Path 'backend\public\*' -Recurse -Force }"
+:: Clean folder using CMD commands
+echo Cleaning old files...
+del /s /q "backend\public\*" >nul 2>&1
+for /d %%x in ("backend\public\*") do rd /s /q "%%x" >nul 2>&1
 
 :: 3. Copy Build Files
 echo Step 3: Copying files to backend/public...
@@ -31,8 +33,8 @@ echo SUCCESS!
 echo.
 echo Next Steps:
 echo 1. git add backend/public
-echo 2. git commit -m \"Sync frontend build\"
+echo 2. git commit -m "Sync frontend build"
 echo 3. git push
-echo 4. Update Render Build Command to: cd backend ^&^& npm install ^&^& npm run build
+echo 4. Render will auto-deploy.
 echo ====================================================
 pause
