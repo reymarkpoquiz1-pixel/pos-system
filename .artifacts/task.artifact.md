@@ -1,3 +1,3 @@
-- [x] Update `background_removal_service.dart` with "Super Stable" multi-payload logic
-- [x] Implement raw Base64 fallback (without prefix)
-- [ ] Inform user to sync and push for final verification
+- [x] Update `app/build.gradle.kts` with stable NDK and SDK versions
+- [x] Remove corrupted CMake cache and build artifacts
+- [x] Provide instructions for NDK installation if needed
