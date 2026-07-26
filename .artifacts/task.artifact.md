@@ -1,4 +1,3 @@
-- [x] Revert `background_removal_service.dart` to stable Bria 1.4
-- [x] Implement smart payload fallback logic
-- [x] Add detailed error reporting in `products_view.dart`
-- [x] Verify script paths and push instructions
+- [x] Update `background_removal_service.dart` with "Super Stable" multi-payload logic
+- [x] Implement raw Base64 fallback (without prefix)
+- [ ] Inform user to sync and push for final verification

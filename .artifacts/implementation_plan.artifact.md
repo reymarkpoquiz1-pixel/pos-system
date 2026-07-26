@@ -1,33 +1,24 @@
-# Implementation Plan - Magic Clean Stability & Recovery Fix
+# Implementation Plan - Magic Clean "Super Stable" Fix
 
-This plan aims to restore the Magic Clean (Background Removal) feature by reverting to the more stable Bria RMBG 1.4 model and implementing a robust "Server Wake-up" and error reporting system.
-
-## User Review Required
-
-> [!IMPORTANT]
-> The AI servers at Hugging Face sometimes "sleep" to save power. If the first attempt at Magic Clean fails, wait 10 seconds and try again—this "wakes up" the server.
+This plan implements a highly resilient background removal service designed to handle various AI server constraints (file size, payload format, and endpoint naming) to resolve the recurring 500/404 errors.
 
 ## Proposed Changes
 
 ### Frontend Service
 
 #### [MODIFY] [background_removal_service.dart](file:///C:/pos-all-in-one/frontend/lib/core/services/background_removal_service.dart)
-- **Revert to RMBG 1.4**: Make `briaai/BRIA-RMBG-1.4` the primary endpoint.
-- **Smart Payload Fallback**: Implement three levels of fallback:
-    1. Gradio 4 `FileData` format.
-    2. Gradio 3 `Simple Array` format.
-    3. Direct Base64 string format.
-- **Detailed Error Catching**: Catch specific HTTP status codes and provide actionable feedback (e.g., "Server Busy" for 503, "File Too Large" for 413).
-
-### Inventory UI
-
-#### [MODIFY] [products_view.dart](file:///C:/pos-all-in-one/frontend/lib/features/inventory/views/products_view.dart)
-- **Enhanced SnackBar**: Update the error display to include the specific reason for failure, helping the user understand if they need to resize their image or wait for the server.
+- **Lower Size Limit**: Set a stricter limit of 3MB to prevent server-side memory crashes on free AI spaces.
+- **Payload Polymorphism**: For each endpoint, the service will now try:
+    1. Modern Gradio `FileData` object.
+    2. Explicit `api_name: "/predict"`.
+    3. Raw Base64 string (without the `data:` prefix) as some older spaces expect this.
+- **Increased Space Variety**: Add a third backup space URL.
+- **Response Validation**: Better handling of the returned data to ensure it's a valid image path before attempting download.
 
 ## Verification Plan
 
 ### Manual Verification
-1. Run `sync_frontend.bat` to build the new JS.
-2. Push to GitHub and wait for Render.
-3. **Test Case 1**: Use a small image (< 1MB).
-4. **Test Case 2**: If failure occurs, retry once after 10 seconds to verify "wake-up" logic.
+1. Run `sync_frontend.bat` to build the updated logic into the web app.
+2. Push to GitHub and wait for Render deployment.
+3. **Test Case**: Upload a small image (~500KB) and click Magic Clean.
+4. **Retry Logic**: If a "Server Error" message appears with a Retry button, wait 5 seconds and click Retry to ensure the space is "awake."

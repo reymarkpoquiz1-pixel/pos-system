@@ -14,28 +14,30 @@ class BackgroundRemovalException implements Exception {
 }
 
 class BackgroundRemovalService {
-  /// We prioritize the stable 1.4 version as 2.0 is currently gated (requires login).
+  /// Multiple spaces to ensure high availability. 
+  /// 1.4 is prioritized for stability as 2.0 is often gated.
   static const List<String> _spaceUrls = [
     'https://briaai-bria-rmbg-1-4.hf.space',
-    'https://briaai-bria-rmbg-2-0.hf.space', // Backup fallback
+    'https://briaai-rmbg-1-4.hf.space', // Mirror
+    'https://briaai-bria-rmbg-2-0.hf.space', // Fallback
   ];
 
   static Future<XFile?> removeBackground(XFile imageFile) async {
     debugPrint('Magic Clean: Starting background removal for ${imageFile.path}');
     
-    // 1. Read bytes and check size
+    // 1. Read bytes and enforce a safe size limit for free AI servers
     final bytes = await imageFile.readAsBytes();
-    if (bytes.length > 4 * 1024 * 1024) {
-      throw BackgroundRemovalException('Image is too large (>4MB). Please use a smaller photo.');
+    if (bytes.length > 3 * 1024 * 1024) {
+      throw BackgroundRemovalException('Image is too large (>3MB). Please use a smaller photo.');
     }
     
-    // 2. Prepare Data URI
+    // 2. Prepare Data URI formats
     final base64String = base64Encode(bytes);
     final dataUri = 'data:${imageFile.mimeType ?? "image/png"};base64,$base64String';
 
     String? lastError;
 
-    // 3. Iterate through available AI spaces
+    // 3. Loop through available spaces
     for (var baseUrl in _spaceUrls) {
       final endpoints = [
         '$baseUrl/gradio_api/api/predict',
@@ -48,25 +50,27 @@ class BackgroundRemovalService {
         final sessionHash = _generateSessionHash();
 
         try {
-          // Different Gradio versions expect different JSON structures
-          final payloads = [
-            // Attempt 1: Standard Gradio 4 (FileData) - Most likely for 1.4/2.0
+          // 4. Try different payload "Styles" for each endpoint
+          final List<Map<String, dynamic>> payloads = [
+            // Style 1: Modern Gradio 4 with FileData object
             {
-              "data": [
-                {"path": dataUri, "meta": {"_type": "gradio.FileData"}}
-              ],
+              "data": [{"path": dataUri, "meta": {"_type": "gradio.FileData"}}],
               "session_hash": sessionHash,
               "fn_index": 0
             },
-            // Attempt 2: Bria 2.0 specialized (with api_name)
+            // Style 2: Bria 2.0 specific with api_name
             {
-              "data": [
-                {"path": dataUri, "meta": {"_type": "gradio.FileData"}}
-              ],
+              "data": [{"path": dataUri, "meta": {"_type": "gradio.FileData"}}],
               "api_name": "/png",
               "session_hash": sessionHash
             },
-            // Attempt 3: Gradio 3 (Simple string array)
+            // Style 3: Raw Base64 string (no prefix) - Some servers prefer this
+            {
+              "data": [base64String],
+              "session_hash": sessionHash,
+              "fn_index": 0
+            },
+            // Style 4: Full Data URI string (Gradio 3 style)
             {
               "data": [dataUri],
               "session_hash": sessionHash,
@@ -75,28 +79,36 @@ class BackgroundRemovalService {
           ];
 
           for (var payload in payloads) {
-            debugPrint('Magic Clean: Trying $url with payload variation...');
+            debugPrint('Magic Clean: Trying ${baseUrl.split("//")[1]} style...');
+            
             final response = await client.post(
               Uri.parse(url),
               headers: {'Content-Type': 'application/json'},
               body: jsonEncode(payload),
-            ).timeout(const Duration(seconds: 45));
+            ).timeout(const Duration(seconds: 50));
 
             if (response.statusCode == 200) {
               final data = jsonDecode(response.body);
               final outputData = data['data'];
+              
               if (outputData != null && outputData.isNotEmpty) {
                 final result = outputData[0];
-                String? imgPath = (result is Map) ? (result['path'] ?? result['url']) : result;
+                String? imgPath;
+                
+                if (result is Map) {
+                  imgPath = result['path'] ?? result['url'];
+                } else if (result is String) {
+                  imgPath = result;
+                }
 
-                if (imgPath != null) {
+                if (imgPath != null && imgPath.isNotEmpty) {
                   // Resolve final download URL
                   String fullUrl = imgPath.startsWith('http') ? imgPath : '$baseUrl/file=$imgPath';
                   if (!imgPath.startsWith('http') && url.contains('gradio_api')) {
                      fullUrl = '$baseUrl/gradio_api/file=$imgPath';
                   }
 
-                  debugPrint('Magic Clean: Fetching result from $fullUrl');
+                  debugPrint('Magic Clean: Downloading result...');
                   final imgRes = await http.get(Uri.parse(fullUrl)).timeout(const Duration(seconds: 25));
                   
                   if (imgRes.statusCode == 200) {
@@ -113,17 +125,22 @@ class BackgroundRemovalService {
                 }
               }
             } else if (response.statusCode == 503) {
-              lastError = 'AI Server is sleeping. Please wait 10s and retry.';
-              break; // Don't try other payloads on this URL if it's sleeping
+              lastError = 'AI server is sleeping. Wait 10s and retry.';
+              break; 
             } else if (response.statusCode == 413) {
-              lastError = 'Image is too large for the server.';
+              lastError = 'Image is too large for the AI server.';
               break;
             } else if (response.statusCode != 404) {
-              lastError = 'Server error (${response.statusCode})';
+              String detail = '';
+              try {
+                final body = jsonDecode(response.body);
+                detail = ' (${body["message"] ?? body["error"] ?? "unknown error"})';
+              } catch (_) {}
+              lastError = 'Server error ${response.statusCode}$detail';
             }
           }
         } catch (e) {
-          debugPrint('Magic Clean error at $url: $e');
+          debugPrint('Magic Clean: error at $url: $e');
           lastError = 'Connection failed. Check your internet.';
         } finally {
           client.close();
@@ -131,7 +148,7 @@ class BackgroundRemovalService {
       }
     }
 
-    throw BackgroundRemovalException(lastError ?? 'Could not connect to AI. Please try again.');
+    throw BackgroundRemovalException('Magic Clean: ${lastError ?? "Server unavailable"}. Please try a smaller image or retry in 10s.');
   }
 
   static String _generateSessionHash() {
