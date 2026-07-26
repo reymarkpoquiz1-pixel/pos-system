@@ -40,6 +40,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   late String _storeName;
   String? _logoUrl;
   String? _profileImageUrl;
+  bool _isLoading = true;
   bool _isSyncing = false;
   bool _isSidebarExpanded = true;
 
@@ -50,110 +51,26 @@ class _AdminDashboardState extends State<AdminDashboard> {
     _loadCachedData().then((_) => _fetchAllData());
   }
 
-  Widget _buildActiveView(bool isMobile) {
-    switch (_selectedMenu) {
-      case 'Dashboard':
-        return DashboardView(
-          key: const PageStorageKey('DashboardView'),
-          dashboardStats: _dashboardStats,
-          chartData: _chartData,
-          productsList: _productsList,
-          topSellingProducts: _topSellingProducts,
-          transactionsList: _transactionsList,
-          isMobile: isMobile,
-          onMenuSelect: (menu) => setState(() => _selectedMenu = menu),
-          context: context,
-          storeSettings: _storeSettings,
-          isLoading: _isLoading,
-        );
-      case 'Products':
-        return ProductsView(
-          key: const PageStorageKey('ProductsView'),
-          productsList: _productsList,
-          onRefresh: _fetchAllData,
-          onProductUpdated: _handleProductUpdate,
-          isMobile: isMobile,
-          userId: widget.userId,
-          isLoading: _isLoading,
-        );
-      case 'Categories':
-        return CategoriesView(
-          categoriesList: _categoriesList,
-          onRefresh: _fetchAllData,
-          isMobile: isMobile,
-        );
-      case 'Inventory':
-        return InventoryView(
-          key: const PageStorageKey('InventoryView'),
-          productsList: _productsList,
-          userId: widget.userId,
-          onRefresh: _fetchAllData,
-        );
-      case 'Employees':
-        return EmployeesView(
-          employeesList: _employeesList,
-          isMobile: isMobile,
-          onRefresh: _fetchAllData,
-        );
-      case 'Customers':
-        return CustomersView(
-          customersList: _customersList,
-          onRefresh: _fetchAllData,
-        );
-      case 'Orders':
-        return TransactionsView(
-          transactionsList: _transactionsList,
-          onRefresh: _fetchAllData,
-          storeSettings: _storeSettings,
-        );
-      case 'Refunds':
-        return const RefundsView();
-      case 'Promos':
-        return const PromosView();
-      case 'Vouchers':
-        return const VouchersView();
-      case 'Payments':
-        return PaymentsView(transactions: _transactionsList, isMobile: isMobile);
-      case 'Suppliers':
-        return const SuppliersView();
-      case 'Expenses':
-        return const ExpensesView();
-      case 'Reports':
-        return const ReportsView();
-      case 'Audit Logs':
-        return const AuditLogsView();
-      case 'Shift Management':
-        return ShiftManagementView(userId: widget.userId);
-      case 'Review Management':
-        return const ReviewsManagementView();
-      case 'Settings':
-        return SettingsView(onUpdate: _fetchAllData, userId: widget.userId);
-      default:
-        return const Center(child: Text('Coming Soon'));
+  Future<void> _loadCachedData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? cachedData = prefs.getString('admin_dashboard_cache');
+      if (cachedData != null) {
+        final data = json.decode(cachedData);
+        setState(() {
+          _dashboardStats = data['stats'] ?? _dashboardStats;
+          _productsList = data['products'] ?? [];
+          _categoriesList = data['categories'] ?? [];
+          _employeesList = data['employees'] ?? [];
+          _customersList = data['customers'] ?? [];
+          _transactionsList = data['transactions'] ?? [];
+          _isLoading = false; // Show cached data immediately
+        });
+      }
+    } catch (e) {
+      debugPrint('Cache Load Error: $e');
     }
   }
-
-  void _handleProductUpdate(dynamic updatedProduct) {
-    setState(() {
-      List<dynamic> newList = List.from(_productsList);
-      int index = newList.indexWhere((p) => p['id'].toString() == updatedProduct['id'].toString());
-      
-      if (updatedProduct['status'] == 'Archived') {
-        if (index != -1) newList.removeAt(index);
-      } else {
-        if (index != -1) {
-          // Preserve local image path if it exists to avoid white-box flash
-          if (newList[index]['local_image_path'] != null && updatedProduct['local_image_path'] == null) {
-            updatedProduct['local_image_path'] = newList[index]['local_image_path'];
-          }
-          newList[index] = updatedProduct;
-        } else {
-          newList.insert(0, updatedProduct);
-        }
-      }
-      _productsList = newList;
-    });
-    // ...
 
   Map<String, dynamic> _dashboardStats = {
     'total_sales_today': '0.00',
@@ -523,6 +440,89 @@ class _AdminDashboardState extends State<AdminDashboard> {
         prefs.setString('admin_dashboard_cache', json.encode(data));
       }
     });
+  }
+
+  Widget _buildActiveView(bool isMobile) {
+    switch (_selectedMenu) {
+      case 'Dashboard':
+        return DashboardView(
+          key: const PageStorageKey('DashboardView'),
+          dashboardStats: _dashboardStats,
+          chartData: _chartData,
+          productsList: _productsList,
+          topSellingProducts: _topSellingProducts,
+          transactionsList: _transactionsList,
+          isMobile: isMobile,
+          onMenuSelect: (menu) => setState(() => _selectedMenu = menu),
+          context: context,
+          storeSettings: _storeSettings,
+          isLoading: _isLoading,
+        );
+      case 'Products':
+        return ProductsView(
+          key: const PageStorageKey('ProductsView'),
+          productsList: _productsList,
+          onRefresh: _fetchAllData,
+          onProductUpdated: _handleProductUpdate,
+          isMobile: isMobile,
+          userId: widget.userId,
+          isLoading: _isLoading,
+        );
+      case 'Categories':
+        return CategoriesView(
+          categoriesList: _categoriesList,
+          onRefresh: _fetchAllData,
+          isMobile: isMobile,
+        );
+      case 'Inventory':
+        return InventoryView(
+          key: const PageStorageKey('InventoryView'),
+          productsList: _productsList,
+          userId: widget.userId,
+          onRefresh: _fetchAllData,
+        );
+      case 'Employees':
+        return EmployeesView(
+          employeesList: _employeesList,
+          isMobile: isMobile,
+          onRefresh: _fetchAllData,
+        );
+      case 'Customers':
+        return CustomersView(
+          customersList: _customersList,
+          onRefresh: _fetchAllData,
+        );
+      case 'Orders':
+        return TransactionsView(
+          transactionsList: _transactionsList,
+          onRefresh: _fetchAllData,
+          storeSettings: _storeSettings,
+        );
+      case 'Refunds':
+        return const RefundsView();
+      case 'Promos':
+        return const PromosView();
+      case 'Vouchers':
+        return const VouchersView();
+      case 'Payments':
+        return PaymentsView(transactions: _transactionsList, isMobile: isMobile);
+      case 'Suppliers':
+        return const SuppliersView();
+      case 'Expenses':
+        return const ExpensesView();
+      case 'Reports':
+        return const ReportsView();
+      case 'Audit Logs':
+        return const AuditLogsView();
+      case 'Shift Management':
+        return ShiftManagementView(userId: widget.userId);
+      case 'Review Management':
+        return const ReviewsManagementView();
+      case 'Settings':
+        return SettingsView(onUpdate: _fetchAllData, userId: widget.userId);
+      default:
+        return const Center(child: Text('Coming Soon'));
+    }
   }
 
   @override
