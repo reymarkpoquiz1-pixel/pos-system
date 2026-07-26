@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:pos/core/services/api_service.dart';
 import 'package:pos/core/constants/config.dart';
-import 'package:pos/main.dart';
+import 'package:pos/features/auth/views/login_screen.dart';
 import 'product_details_view.dart';
 import '../services/cart_service.dart';
 import 'cart_view.dart';
