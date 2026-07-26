@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:pos/core/services/api_service.dart';
-import 'package:pos/core/constants/config.dart';
 import 'package:pos/core/widgets/dashboard_widgets.dart';
 
 class PromosView extends StatefulWidget {
@@ -297,9 +296,10 @@ class _PromosViewState extends State<PromosView> {
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           TextButton(
             onPressed: () async {
+              final nav = Navigator.of(context);
               await ApiService.post('marketing/delete_promo', {'id': id});
               if (!mounted) return;
-              Navigator.pop(context);
+              nav.pop();
               _fetchPromos();
             },
             child: const Text('Delete', style: TextStyle(color: Colors.red)),

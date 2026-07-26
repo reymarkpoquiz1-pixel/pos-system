@@ -57,9 +57,11 @@ export class Product {
   variants: any;
 
   @Column({ default: 'Active' })
+  @Index()
   status: string;
 
   @Column({ name: 'category_id', nullable: true })
+  @Index()
   categoryId: number;
 
   @ManyToOne(() => Category, (category) => category.products, {

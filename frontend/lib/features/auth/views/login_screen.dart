@@ -249,7 +249,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       children: [
                         Text(_statusMessage, textAlign: TextAlign.center, style: const TextStyle(color: Colors.deepPurple, fontWeight: FontWeight.bold, fontSize: 13)),
                         const SizedBox(height: 8),
-                        LinearProgressIndicator(backgroundColor: Colors.deepPurple.withOpacity(0.1)),
+                        LinearProgressIndicator(backgroundColor: Colors.deepPurple.withValues(alpha: 0.1)),
                       ],
                     ),
                   ),

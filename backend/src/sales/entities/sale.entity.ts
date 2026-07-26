@@ -127,6 +127,7 @@ export class Sale {
   paymentReference: string;
 
   @CreateDateColumn({ name: 'transaction_date' })
+  @Index()
   transactionDate: Date;
 
   @OneToMany(() => SaleItem, (saleItem) => saleItem.sale, { cascade: true })
