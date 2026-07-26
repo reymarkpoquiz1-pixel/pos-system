@@ -1,2 +1,2 @@
-- [x] Update `background_removal_service.dart` with Gradio 4 compatible endpoints
-- [/] Inform user to run `sync_frontend.bat` and push to GitHub
+- [x] Update `background_removal_service.dart` with advanced fallback logic
+- [ ] Inform user to sync and push

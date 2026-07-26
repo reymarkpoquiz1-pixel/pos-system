@@ -1,19 +1,31 @@
-# Walkthrough - Magic Clean 404 Fix
+# Walkthrough - Advanced Magic Clean Fix
 
-I have updated the Magic Clean service to be compatible with the latest Gradio 4 API structure used by Hugging Face.
+This update implements a highly robust fallback system for the Magic Clean (Background Removal) feature to handle recent API changes in Hugging Face spaces.
 
 ## Changes Made
 
-### Frontend Fix
-Modified [background_removal_service.dart](file:///C:/pos-all-in-one/frontend/lib/core/services/background_removal_service.dart) to support the new `/gradio_api/` endpoint prefix. The app will now automatically try several URL patterns until it finds the one that works, preventing the 404 error.
+### 1. Smart Endpoint Discovery
+Modified [background_removal_service.dart](file:///C:/pos-all-in-one/frontend/lib/core/services/background_removal_service.dart) to try multiple URL combinations. It now searches for:
+- `/api/predict`
+- `/gradio_api/api/predict`
+- `/run/predict`
+- `/gradio_api/run/predict`
 
-## Next Steps for You
+### 2. Dual Payload Strategy
+The service now attempts two different JSON formats for each endpoint:
+- **Gradio 4 (FileData)**: The new standard for handling images as objects.
+- **Gradio 3 (Base64 String)**: For older or custom spaces that expect raw strings.
 
-1.  **I-run ang [sync_frontend.bat](file:///C:/pos-all-in-one/sync_frontend.bat)** sa iyong computer para ma-rebuild ang website files.
-2.  **I-push sa GitHub**:
+### 3. Smarter Error Handling
+The error messages are now descriptive. Instead of a generic "404," you will see which specific endpoint failed and why, making it much easier to identify if a specific AI server is down.
+
+## Next Steps
+
+1.  **Run `sync_frontend.bat`** on your computer.
+2.  **Push to GitHub**:
     ```bash
     git add .
-    git commit -m "Fix: Magic Clean Gradio 4 API compatibility"
+    git commit -m "Fix: Smart Fallback AI logic for Magic Clean (fix 404)"
     git push origin master
     ```
-3.  **Subukan sa Browser**: Pagkatapos mag-deploy ng Render, dapat ay gumagana na ulit ang Magic Clean button.
+3.  **Wait for Render to update**.
