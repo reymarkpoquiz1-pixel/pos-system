@@ -1,21 +1,22 @@
-import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
+import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'dart:math';
+import 'dart:io' as io;
 
 class BackgroundRemovalService {
   /// Gagamit tayo ng Stable Gradio 4 Queue API (Hugging Face)
   /// Sinusuportahan nito ang session hashing at SSE events.
-  static Future<File?> removeBackground(File imageFile) async {
+  static Future<XFile?> removeBackground(XFile imageFile) async {
     debugPrint('Magic Clean: Starting background removal for ${imageFile.path}');
     final client = http.Client();
     final sessionHash = _generateSessionHash();
     const spaceUrl = 'https://briaai-bria-rmbg-1-4.hf.space';
     
     try {
-      // Step 1: Upload image to Gradio server first (Required for Gradio 4)
+      // Step 1: Upload image to Gradio server
       debugPrint('Magic Clean: Uploading image to HF Space...');
       final uploadRes = await _uploadFile(client, imageFile, spaceUrl);
       if (uploadRes == null) {
@@ -24,10 +25,10 @@ class BackgroundRemovalService {
       }
       debugPrint('Magic Clean: Upload successful: $uploadRes');
 
-      // Step 2: Join the Queue using FileData object
-      debugPrint('Magic Clean: Joining queue...');
-      final joinRes = await client.post(
-        Uri.parse('$spaceUrl/queue/join'),
+      // Step 2: Call Predict API (Synchronous is better for Web than SSE)
+      debugPrint('Magic Clean: Calling Predict API...');
+      final response = await client.post(
+        Uri.parse('$spaceUrl/api/predict'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           "data": [
@@ -36,78 +37,50 @@ class BackgroundRemovalService {
               "meta": {"_type": "gradio.FileData"}
             }
           ],
-          "event_data": null,
           "fn_index": 0,
           "session_hash": sessionHash
         }),
-      );
+      ).timeout(const Duration(seconds: 30));
 
-      if (joinRes.statusCode != 200) {
-        debugPrint('Magic Clean Queue Join Error: ${joinRes.body}');
+      if (response.statusCode != 200) {
+        debugPrint('Magic Clean Predict Error: ${response.statusCode} - ${response.body}');
         return null;
       }
 
-      final eventId = jsonDecode(joinRes.body)['event_id'];
-      debugPrint('Magic Clean: Event ID: $eventId');
+      final data = jsonDecode(response.body);
+      debugPrint('Magic Clean: Parsing output...');
+      
+      if (data != null && data['data'] != null && data['data'].isNotEmpty) {
+        final result = data['data'][0];
+        String? imgPath;
+        
+        if (result is Map) {
+          imgPath = result['path'] ?? result['url'];
+        } else if (result is String) {
+          imgPath = result;
+        }
 
-      // Step 3: Listen for Data via SSE
-      final dataUrl = Uri.parse('$spaceUrl/queue/data?session_hash=$sessionHash');
-      final streamRequest = http.Request('GET', dataUrl);
-      final streamedResponse = await client.send(streamRequest);
-
-      await for (var line in streamedResponse.stream.transform(utf8.decoder).transform(const LineSplitter())) {
-        if (line.isEmpty) continue;
-        debugPrint('Magic Clean Server Message: $line');
-
-        if (line.startsWith('data: ')) {
-          final dataJson = line.substring(6);
-          if (dataJson.isEmpty) continue;
+        if (imgPath != null) {
+          // Gradio 4 dynamic file path handling
+          String fullUrl = imgPath.startsWith('http') 
+              ? imgPath 
+              : '$spaceUrl/file=$imgPath';
           
-          try {
-            final event = jsonDecode(dataJson);
-            final msg = event['msg'];
-            
-            if (msg == 'process_completed') {
-              debugPrint('Magic Clean: Process Completed! Parsing output...');
-              final output = event['output'];
-              if (output != null && output['data'] != null && output['data'].isNotEmpty) {
-                final result = output['data'][0];
-                String? imgPath;
-                
-                if (result is Map) {
-                  imgPath = result['path'] ?? result['url'];
-                } else if (result is String) {
-                  imgPath = result;
-                }
-
-                if (imgPath != null) {
-                  // Gradio 4 dynamic file path handling
-                  String fullUrl = imgPath.startsWith('http') 
-                      ? imgPath 
-                      : '$spaceUrl/file=$imgPath';
-                  
-                  debugPrint('Magic Clean: Final Download URL: $fullUrl');
-                  final imgRes = await http.get(Uri.parse(fullUrl));
-                  if (imgRes.statusCode == 200) {
-                    return await _saveToFile(imgRes.bodyBytes);
-                  } else {
-                    debugPrint('Magic Clean: Download failed with status ${imgRes.statusCode}');
-                  }
-                } else {
-                  debugPrint('Magic Clean: Could not find image path in output data.');
-                }
-              }
-              break;
-            } else if (msg == 'send_data') {
-              debugPrint('Magic Clean: Server is processing...');
-            } else if (msg == 'process_starts') {
-              debugPrint('Magic Clean: AI started working...');
-            } else if (msg == 'queue_full' || msg == 'process_error') {
-              debugPrint('Magic Clean Server Error: $msg');
-              return null;
+          debugPrint('Magic Clean: Final Download URL: $fullUrl');
+          final imgRes = await http.get(Uri.parse(fullUrl));
+          if (imgRes.statusCode == 200) {
+            final bytes = imgRes.bodyBytes;
+            if (kIsWeb) {
+              return XFile.fromData(bytes, name: 'cleaned_${imageFile.name}', mimeType: 'image/png');
+            } else {
+              final tempDir = await getTemporaryDirectory();
+              final fileName = 'cleaned_${DateTime.now().millisecondsSinceEpoch}.png';
+              final cleanedFile = io.File('${tempDir.path}/$fileName');
+              await cleanedFile.writeAsBytes(bytes);
+              return XFile(cleanedFile.path);
             }
-          } catch (e) {
-            // Ignore keep-alive or malformed messages
+          } else {
+            debugPrint('Magic Clean: Download failed with status ${imgRes.statusCode}');
           }
         }
       }
@@ -122,10 +95,15 @@ class BackgroundRemovalService {
   }
 
   /// Helper to upload file to Gradio /upload endpoint
-  static Future<String?> _uploadFile(http.Client client, File file, String spaceUrl) async {
+  static Future<String?> _uploadFile(http.Client client, XFile file, String spaceUrl) async {
     try {
       final request = http.MultipartRequest('POST', Uri.parse('$spaceUrl/upload'));
-      request.files.add(await http.MultipartFile.fromPath('files', file.path));
+      final bytes = await file.readAsBytes();
+      request.files.add(http.MultipartFile.fromBytes(
+        'files', 
+        bytes,
+        filename: file.name,
+      ));
       
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
@@ -148,13 +126,6 @@ class BackgroundRemovalService {
     final random = Random();
     return List.generate(11, (index) => chars[random.nextInt(chars.length)]).join();
   }
-
-  static Future<File> _saveToFile(Uint8List bytes) async {
-    final tempDir = await getTemporaryDirectory();
-    final fileName = 'cleaned_${DateTime.now().millisecondsSinceEpoch}.png';
-    final cleanedFile = File('${tempDir.path}/$fileName');
-    await cleanedFile.writeAsBytes(bytes);
-    debugPrint('Magic Clean: Success! Saved at ${cleanedFile.path}');
-    return cleanedFile;
-  }
 }
+
+

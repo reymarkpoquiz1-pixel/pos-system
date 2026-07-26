@@ -708,7 +708,7 @@ class _ProductsViewState extends State<ProductsView> {
   }
 
   Future<void> _cleanAllLocalImages() async {
-    if (_selectedImages.isEmpty || kIsWeb) return;
+    if (_selectedImages.isEmpty) return;
 
     setState(() {
       _isProcessingImage = true;
@@ -723,18 +723,32 @@ class _ProductsViewState extends State<ProductsView> {
       });
 
       XFile originalXFile = _selectedImages[i];
-      // Skip if already cleaned (filename starts with 'cleaned_')
+      // Skip if na-clean na (filename starts with 'cleaned_')
       if (originalXFile.name.startsWith('cleaned_')) {
         continue;
       }
 
-      File originalFile = File(originalXFile.path);
-      File? cleanedFile = await BackgroundRemovalService.removeBackground(originalFile);
-      
-      if (mounted && cleanedFile != null) {
-        setState(() {
-          _selectedImages[i] = XFile(cleanedFile.path);
-        });
+      try {
+        final cleanedXFile = await BackgroundRemovalService.removeBackground(originalXFile);
+        
+        if (mounted) {
+          if (cleanedXFile != null) {
+            setState(() {
+              _selectedImages[i] = cleanedXFile;
+            });
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Failed to clean image ${i + 1}. Please try again.'), backgroundColor: Colors.orange)
+            );
+          }
+        }
+      } catch (e) {
+        debugPrint('Error cleaning image $i: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error cleaning image ${i + 1}: $e'), backgroundColor: Colors.red)
+          );
+        }
       }
     }
 
