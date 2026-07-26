@@ -3,6 +3,7 @@
 # AI Artifacts
 .artifacts/
 frontend/.artifacts/
+*.artifact.md
 
 # OS Files
 .DS_Store
