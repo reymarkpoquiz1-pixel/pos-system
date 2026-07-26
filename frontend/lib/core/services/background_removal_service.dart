@@ -1,171 +1,162 @@
+import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
-import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'dart:math';
-import 'dart:io' as io;
-
-class BackgroundRemovalException implements Exception {
-  final String message;
-  BackgroundRemovalException(this.message);
-  @override
-  String toString() => message;
-}
+import 'package:image_picker/image_picker.dart';
 
 class BackgroundRemovalService {
-  /// Multiple spaces to ensure high availability. 
-  /// BiRefNet is high quality, RMBG 2.0 is fast.
-  static const List<String> _spaceUrls = [
-    'https://zhengpeng7-birefnet.hf.space',
-    'https://briaai-bria-rmbg-2-0.hf.space',
-    'https://briaai-bria-rmbg-1-4.hf.space',
-    'https://briaai-rmbg-1-4.hf.space', 
-  ];
-
+  /// Gagamit tayo ng Stable Gradio 4 Queue API (Hugging Face)
+  /// Sinusuportahan nito ang session hashing at SSE events.
   static Future<XFile?> removeBackground(XFile imageFile) async {
     debugPrint('Magic Clean: Starting background removal for ${imageFile.path}');
-    
-    // 1. Read bytes and enforce a safe size limit for free AI servers
-    final bytes = await imageFile.readAsBytes();
-    if (bytes.length > 4 * 1024 * 1024) {
-      throw BackgroundRemovalException('Image is too large (>4MB). Please use a smaller photo.');
-    }
-    
-    // 2. Prepare Data URI formats
-    final base64String = base64Encode(bytes);
-    final mimeType = imageFile.mimeType ?? "image/png";
-    final dataUri = 'data:$mimeType;base64,$base64String';
+    final client = http.Client();
+    final sessionHash = _generateSessionHash();
+    const spaceUrl = 'https://briaai-bria-rmbg-1-4.hf.space';
 
-    String? lastError;
+    try {
+      // Step 1: Upload image to Gradio server first (Required for Gradio 4)
+      debugPrint('Magic Clean: Uploading image to HF Space...');
+      final uploadRes = await _uploadFile(client, imageFile, spaceUrl);
+      if (uploadRes == null) {
+        debugPrint('Magic Clean: Upload failed.');
+        return null;
+      }
+      debugPrint('Magic Clean: Upload successful: $uploadRes');
 
-    // 3. Loop through available spaces
-    for (var baseUrl in _spaceUrls) {
-      final isBiRefNet = baseUrl.contains('birefnet');
-      
-      final endpoints = [
-        '$baseUrl/gradio_api/api/predict',
-        '$baseUrl/api/predict',
-        '$baseUrl/run/predict',
-      ];
+      // Step 2: Join the Queue using FileData object
+      debugPrint('Magic Clean: Joining queue...');
+      final joinRes = await client.post(
+        Uri.parse('$spaceUrl/queue/join'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          "data": [
+            {
+              "path": uploadRes,
+              "meta": {"_type": "gradio.FileData"}
+            }
+          ],
+          "event_data": null,
+          "fn_index": 0,
+          "session_hash": sessionHash
+        }),
+      );
 
-      for (var url in endpoints) {
-        final client = http.Client();
-        final sessionHash = _generateSessionHash();
+      if (joinRes.statusCode != 200) {
+        debugPrint('Magic Clean Queue Join Error: ${joinRes.body}');
+        return null;
+      }
 
-        try {
-          // 4. Try different payload "Styles" for each endpoint
-          final List<Map<String, dynamic>> payloads = [];
-          
-          if (isBiRefNet) {
-            // BiRefNet specific payload
-            payloads.add({
-              "data": [
-                {"path": dataUri, "meta": {"_type": "gradio.FileData"}},
-                "1024x1024",
-                "General"
-              ],
-              "session_hash": sessionHash,
-              "fn_index": 0
-            });
-          } else {
-            // Standard Gradio 4/5 Styles
-            payloads.addAll([
-              {
-                "data": [{"path": dataUri, "meta": {"_type": "gradio.FileData"}}],
-                "session_hash": sessionHash,
-                "fn_index": 0
-              },
-              {
-                "data": [dataUri],
-                "session_hash": sessionHash,
-                "fn_index": 0
-              }
-            ]);
-          }
+      final eventId = jsonDecode(joinRes.body)['event_id'];
+      debugPrint('Magic Clean: Event ID: $eventId');
 
-          for (var payload in payloads) {
-            debugPrint('Magic Clean: Trying ${baseUrl.split("//")[1]} style...');
-            
-            final response = await client.post(
-              Uri.parse(url),
-              headers: {'Content-Type': 'application/json'},
-              body: jsonEncode(payload),
-            ).timeout(const Duration(seconds: 45));
+      // Step 3: Listen for Data via SSE
+      final dataUrl = Uri.parse('$spaceUrl/queue/data?session_hash=$sessionHash');
+      final streamRequest = http.Request('GET', dataUrl);
+      final streamedResponse = await client.send(streamRequest);
 
-            if (response.statusCode == 200) {
-              final data = jsonDecode(response.body);
-              
-              // Handle Gradio 5 "output" field or Gradio 4 "data" field
-              final outputData = data['data'] ?? data['output'];
-              
-              if (outputData != null && outputData is List && outputData.isNotEmpty) {
-                final result = outputData[0];
+      await for (var line in streamedResponse.stream.transform(utf8.decoder).transform(const LineSplitter())) {
+        if (line.isEmpty) continue;
+        debugPrint('Magic Clean Server Message: $line');
+
+        if (line.startsWith('data: ')) {
+          final dataJson = line.substring(6);
+          if (dataJson.isEmpty) continue;
+
+          try {
+            final event = jsonDecode(dataJson);
+            final msg = event['msg'];
+
+            if (msg == 'process_completed') {
+              debugPrint('Magic Clean: Process Completed! Parsing output...');
+              final output = event['output'];
+              if (output != null && output['data'] != null && output['data'].isNotEmpty) {
+                final result = output['data'][0];
                 String? imgPath;
-                
+
                 if (result is Map) {
                   imgPath = result['path'] ?? result['url'];
                 } else if (result is String) {
                   imgPath = result;
                 }
 
-                if (imgPath != null && imgPath.isNotEmpty) {
-                  // Resolve final download URL
-                  String fullUrl = imgPath.startsWith('http') ? imgPath : '$baseUrl/file=$imgPath';
-                  if (!imgPath.startsWith('http')) {
-                    if (url.contains('gradio_api')) {
-                      fullUrl = '$baseUrl/gradio_api/file=$imgPath';
-                    } else if (url.contains('/api/predict')) {
-                      fullUrl = '$baseUrl/file=$imgPath';
-                    }
-                  }
+                if (imgPath != null) {
+                  // Gradio 4 dynamic file path handling
+                  String fullUrl = imgPath.startsWith('http')
+                      ? imgPath
+                      : '$spaceUrl/file=$imgPath';
 
-                  debugPrint('Magic Clean: Downloading result from $fullUrl');
-                  final imgRes = await http.get(Uri.parse(fullUrl)).timeout(const Duration(seconds: 25));
-                  
+                  debugPrint('Magic Clean: Final Download URL: $fullUrl');
+                  final imgRes = await http.get(Uri.parse(fullUrl));
                   if (imgRes.statusCode == 200) {
-                    client.close();
-                    if (kIsWeb) {
-                      return XFile.fromData(imgRes.bodyBytes, name: 'cleaned_${imageFile.name}', mimeType: 'image/png');
-                    } else {
-                      final tempDir = await getTemporaryDirectory();
-                      final file = io.File('${tempDir.path}/cleaned_${DateTime.now().millisecondsSinceEpoch}.png');
-                      await file.writeAsBytes(imgRes.bodyBytes);
-                      return XFile(file.path);
-                    }
+                    final savedFile = await _saveToFile(imgRes.bodyBytes);
+                    return XFile(savedFile.path);
+                  } else {
+                    debugPrint('Magic Clean: Download failed with status ${imgRes.statusCode}');
                   }
+                } else {
+                  debugPrint('Magic Clean: Could not find image path in output data.');
                 }
               }
-            } else if (response.statusCode == 503 || response.statusCode == 504) {
-              lastError = 'Server is busy or sleeping. Trying next...';
-              break; 
-            } else if (response.statusCode == 413) {
-              lastError = 'Image is too large for this server.';
               break;
-            } else if (response.statusCode != 404) {
-              String detail = '';
-              try {
-                final body = jsonDecode(response.body);
-                detail = ' (${body["message"] ?? body["error"] ?? "unknown error"})';
-              } catch (_) {}
-              lastError = 'Server error ${response.statusCode}$detail';
+            } else if (msg == 'send_data') {
+              debugPrint('Magic Clean: Server is processing...');
+            } else if (msg == 'process_starts') {
+              debugPrint('Magic Clean: AI started working...');
+            } else if (msg == 'queue_full' || msg == 'process_error') {
+              debugPrint('Magic Clean Server Error: $msg');
+              return null;
             }
+          } catch (e) {
+            // Ignore keep-alive or malformed messages
           }
-        } catch (e) {
-          debugPrint('Magic Clean: error at $url: $e');
-          lastError = 'Connection timeout. Trying next...';
-        } finally {
-          client.close();
         }
       }
-    }
 
-    throw BackgroundRemovalException('Magic Clean: ${lastError ?? "Service unavailable"}. Please try a smaller image or retry in 10s.');
+      return null;
+    } catch (e) {
+      debugPrint('Magic Clean Exception: $e');
+      return null;
+    } finally {
+      client.close();
+    }
+  }
+
+  /// Helper to upload file to Gradio /upload endpoint
+  static Future<String?> _uploadFile(http.Client client, XFile file, String spaceUrl) async {
+    try {
+      final request = http.MultipartRequest('POST', Uri.parse('$spaceUrl/upload'));
+      request.files.add(await http.MultipartFile.fromPath('files', file.path));
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final List<dynamic> paths = jsonDecode(response.body);
+        if (paths.isNotEmpty) {
+          return paths[0].toString();
+        }
+      }
+      debugPrint('Magic Clean Upload Error: ${response.statusCode} - ${response.body}');
+    } catch (e) {
+      debugPrint('Magic Clean Upload Exception: $e');
+    }
+    return null;
   }
 
   static String _generateSessionHash() {
     const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
     final random = Random();
     return List.generate(11, (index) => chars[random.nextInt(chars.length)]).join();
+  }
+
+  static Future<File> _saveToFile(Uint8List bytes) async {
+    final tempDir = await getTemporaryDirectory();
+    final fileName = 'cleaned_${DateTime.now().millisecondsSinceEpoch}.png';
+    final cleanedFile = File('${tempDir.path}/$fileName');
+    await cleanedFile.writeAsBytes(bytes);
+    debugPrint('Magic Clean: Success! Saved at ${cleanedFile.path}');
+    return cleanedFile;
   }
 }
