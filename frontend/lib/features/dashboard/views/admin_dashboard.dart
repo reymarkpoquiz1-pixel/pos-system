@@ -100,9 +100,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   static const Color textDark = Color(0xFF1C1B1F);
 
   Future<void> _fetchAllData() async {
-    // Only show full loading if we don't have ANY data at all
     bool hasAnyData = _productsList.isNotEmpty || _dashboardStats['total_sales_today'] != '0.00';
-    
     if (!hasAnyData) {
       setState(() => _isLoading = true);
     } else {
@@ -113,42 +111,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
       final response = await ApiService.get('admin/get_initial_data?user_id=${widget.userId}&branch_id=$_selectedBranchId');
 
       if (response.statusCode != 200) {
-        debugPrint('HTTP Error ${response.statusCode}: ${response.body}');
         if (mounted) {
-          setState(() {
-            _isLoading = false;
-            _isSyncing = false;
-          });
-          if (!hasAnyData) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('HTTP Error ${response.statusCode}: Failed to load data'), backgroundColor: Colors.red),
-            );
-          }
+          setState(() { _isLoading = false; _isSyncing = false; });
         }
         return;
       }
 
       if (!mounted) return;
-
       final data = json.decode(response.body);
 
       if (data['success'] == true) {
-        // Cache the data
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('admin_dashboard_cache', response.body);
 
         setState(() {
-          // Null-safe assignments
           if (data['store_settings'] != null) {
             _storeSettings = data['store_settings'];
             _storeName = data['store_settings']['store_name'] ?? _storeName;
             _logoUrl = data['store_settings']['logo_url'];
           }
-
           if (data['current_user'] != null) {
             _profileImageUrl = data['current_user']['profile_image'];
           }
-
           _dashboardStats = data['stats'] ?? _dashboardStats;
           _chartData = data['charts'] ?? {'hourly_sales': [], 'payment_methods': []};
           _productsList = data['products'] ?? [];
@@ -163,251 +147,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
           _isSyncing = false;
         });
       } else {
-        setState(() {
-          _isLoading = false;
-          _isSyncing = false;
-        });
-        if (!hasAnyData) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Server Error: ${data['message'] ?? 'Unknown error'}'),
-              backgroundColor: Colors.orange,
-              duration: const Duration(seconds: 10),
-              action: SnackBarAction(label: 'Retry', textColor: Colors.white, onPressed: _fetchAllData),
-            ),
-          );
-        }
+        setState(() { _isLoading = false; _isSyncing = false; });
       }
     } catch (e) {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _isSyncing = false;
-        });
-        debugPrint('Fetch Error: $e');
-
-        if (!hasAnyData) {
-          String errorMsg = 'Connection Error: Mangyaring i-check ang iyong internet o server.';
-          if (e is FormatException) {
-            errorMsg = 'Data Error: Nakatanggap ng invalid response mula sa server.';
-          }
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(errorMsg),
-              backgroundColor: Colors.red,
-              action: SnackBarAction(
-                label: 'Details',
-                textColor: Colors.white,
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: const Text('Error Details'),
-                      content: SingleChildScrollView(child: Text(e.toString())),
-                      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))],
-                    ),
-                  );
-                }
-              ),
-            ),
-          );
-        }
+        setState(() { _isLoading = false; _isSyncing = false; });
       }
     }
-  }
-
-  Future<void> _uploadProfileImage() async {
-    final picker = ImagePicker();
-    final image = await picker.pickImage(source: ImageSource.gallery);
-
-    if (image == null) return;
-
-    try {
-      final response = await ApiService.upload('employees/upload_profile_image', image.path, 'image');
-      final data = json.decode(response.body);
-
-      if (data['success']) {
-        if (!mounted) return;
-        setState(() {
-          _profileImageUrl = data['profile_image'];
-        });
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile picture updated!'), backgroundColor: Colors.green));
-      } else {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Upload failed: ${data['message']}'), backgroundColor: Colors.red));
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
-    }
-  }
-
-  void _showNotificationDialog() {
-    // Mark as read immediately when opened
-    ApiService.post(
-      'settings/mark_read',
-      {'user_id': widget.userId},
-    ).then((_) => _fetchAllData());
-
-    int unreadCount = _realNotifications.where((n) => n['is_read'] == '0' || n['is_read'] == 0).length;
-
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        alignment: Alignment.topRight,
-        insetPadding: const EdgeInsets.only(top: 55, right: 20, left: 20),
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Positioned(
-              top: -10,
-              right: 185,
-              child: CustomPaint(
-                size: const Size(20, 10),
-                painter: _TrianglePainter(color: const Color(0xFFFBECEF)),
-              ),
-            ),
-            Container(
-              width: 350,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFBECEF),
-                borderRadius: BorderRadius.circular(28),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10)
-                  )
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Notifications ($unreadCount)',
-                          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF1C1B1F), letterSpacing: -0.5)
-                        ),
-                        IconButton(
-                          onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.close, color: Color(0xFF1C1B1F)),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Flexible(
-                    child: _realNotifications.isEmpty
-                        ? const Padding(
-                            padding: EdgeInsets.all(50),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.notifications_none_rounded, size: 50, color: Colors.black26),
-                                SizedBox(height: 12),
-                                Text('No new notifications', style: TextStyle(color: Colors.black38, fontWeight: FontWeight.w500)),
-                              ],
-                            ),
-                          )
-                        : Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 16),
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFCE1E5),
-                              borderRadius: BorderRadius.circular(24),
-                            ),
-                            child: ListView.builder(
-                              shrinkWrap: true,
-                              padding: EdgeInsets.zero,
-                              itemCount: _realNotifications.length,
-                              itemBuilder: (context, index) {
-                                final notif = _realNotifications[index];
-                                final bool isRead = notif['is_read'].toString() == '1';
-
-                                return Container(
-                                  margin: EdgeInsets.only(bottom: index == _realNotifications.length - 1 ? 0 : 20),
-                                  child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(10),
-                                        decoration: BoxDecoration(
-                                          color: isRead ? Colors.grey.shade300 : const Color(0xFFD68A96).withValues(alpha: 0.2),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: Icon(
-                                          notif['type'] == 'Inventory' ? Icons.inventory_2_outlined : Icons.notifications_active_outlined,
-                                          color: isRead ? Colors.grey : const Color(0xFFD68A96),
-                                          size: 20
-                                        ),
-                                      ),
-                                      const SizedBox(width: 16),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              notif['title'] ?? 'Notification',
-                                              style: TextStyle(fontWeight: FontWeight.w900, color: const Color(0xFF1C1B1F), fontSize: 14, decoration: isRead ? TextDecoration.lineThrough : null),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              notif['message'] ?? '',
-                                              style: const TextStyle(color: Colors.black87, fontSize: 13),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              notif['created_at'] ?? '',
-                                              style: const TextStyle(fontSize: 10, color: Colors.grey),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      children: [
-                        SizedBox(
-                          width: double.infinity,
-                          height: 48,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                              setState(() => _selectedMenu = 'Inventory');
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFD68A96),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              elevation: 0,
-                            ),
-                            child: const Text('Check Inventory', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   void _handleProductUpdate(dynamic updatedProduct) {
@@ -419,7 +165,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
         if (index != -1) newList.removeAt(index);
       } else {
         if (index != -1) {
-          // Preserve local image path if it exists to avoid white-box flash
           if (newList[index]['local_image_path'] != null && updatedProduct['local_image_path'] == null) {
             updatedProduct['local_image_path'] = newList[index]['local_image_path'];
           }
@@ -431,7 +176,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
       _productsList = newList;
     });
 
-    // Silently update cache
     SharedPreferences.getInstance().then((prefs) {
       final String? cachedData = prefs.getString('admin_dashboard_cache');
       if (cachedData != null) {
@@ -498,30 +242,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
           onRefresh: _fetchAllData,
           storeSettings: _storeSettings,
         );
-      case 'Refunds':
-        return const RefundsView();
-      case 'Promos':
-        return const PromosView();
-      case 'Vouchers':
-        return const VouchersView();
-      case 'Payments':
-        return PaymentsView(transactions: _transactionsList, isMobile: isMobile);
-      case 'Suppliers':
-        return const SuppliersView();
-      case 'Expenses':
-        return const ExpensesView();
-      case 'Reports':
-        return const ReportsView();
-      case 'Audit Logs':
-        return const AuditLogsView();
-      case 'Shift Management':
-        return ShiftManagementView(userId: widget.userId);
-      case 'Review Management':
-        return const ReviewsManagementView();
-      case 'Settings':
-        return SettingsView(onUpdate: _fetchAllData, userId: widget.userId);
-      default:
-        return const Center(child: Text('Coming Soon'));
+      case 'Refunds': return const RefundsView();
+      case 'Promos': return const PromosView();
+      case 'Vouchers': return const VouchersView();
+      case 'Payments': return PaymentsView(transactions: _transactionsList, isMobile: isMobile);
+      case 'Suppliers': return const SuppliersView();
+      case 'Expenses': return const ExpensesView();
+      case 'Reports': return const ReportsView();
+      case 'Audit Logs': return const AuditLogsView();
+      case 'Shift Management': return ShiftManagementView(userId: widget.userId);
+      case 'Review Management': return const ReviewsManagementView();
+      case 'Settings': return SettingsView(onUpdate: _fetchAllData, userId: widget.userId);
+      default: return const Center(child: Text('Dashboard'));
     }
   }
 
@@ -530,7 +262,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final bool isMobile = constraints.maxWidth < 950;
-
         return Scaffold(
           backgroundColor: contentBg,
           drawer: isMobile ? Drawer(child: _buildSidebar(context)) : null,
@@ -660,7 +391,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   List<Widget> _buildAppBarActions() {
-    int unreadCount = _realNotifications.where((n) => n['is_read'].toString() == '0').length;
+    int unreadCount = _realNotifications.where((n) => n['is_read'].toString() == '0' || n['is_read'] == 0).length;
     return [
       IconButton(icon: const Icon(Icons.refresh, size: 20, color: textDark), onPressed: _fetchAllData),
       IconButton(
@@ -702,7 +433,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Widget _buildTopNavbar() {
-    int unreadCount = _realNotifications.where((n) => n['is_read'].toString() == '0').length;
+    int unreadCount = _realNotifications.where((n) => n['is_read'].toString() == '0' || n['is_read'] == 0).length;
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -816,6 +547,109 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
+  void _showNotificationDialog() {
+    ApiService.post('settings/mark_read', {'user_id': widget.userId}).then((_) => _fetchAllData());
+    int unreadCount = _realNotifications.where((n) => n['is_read'] == '0' || n['is_read'] == 0).length;
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        alignment: Alignment.topRight,
+        insetPadding: const EdgeInsets.only(top: 55, right: 20, left: 20),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              top: -10,
+              right: 185,
+              child: CustomPaint(
+                size: const Size(20, 10),
+                painter: _TrianglePainter(color: const Color(0xFFFBECEF)),
+              ),
+            ),
+            Container(
+              width: 350,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFBECEF),
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 20, offset: const Offset(0, 10))],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Notifications ($unreadCount)', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF1C1B1F), letterSpacing: -0.5)),
+                        IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close, color: Color(0xFF1C1B1F)), padding: EdgeInsets.zero, constraints: const BoxConstraints()),
+                      ],
+                    ),
+                  ),
+                  Flexible(
+                    child: _realNotifications.isEmpty
+                        ? const Padding(padding: EdgeInsets.all(50), child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.notifications_none_rounded, size: 50, color: Colors.black26), SizedBox(height: 12), Text('No new notifications', style: TextStyle(color: Colors.black38, fontWeight: FontWeight.w500))]))
+                        : Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 16),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(color: const Color(0xFFFCE1E5), borderRadius: BorderRadius.circular(24)),
+                            child: ListView.builder(
+                              shrinkWrap: true,
+                              padding: EdgeInsets.zero,
+                              itemCount: _realNotifications.length,
+                              itemBuilder: (context, index) {
+                                final notif = _realNotifications[index];
+                                final bool isRead = notif['is_read'].toString() == '1';
+                                return Container(
+                                  margin: EdgeInsets.only(bottom: index == _realNotifications.length - 1 ? 0 : 20),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: isRead ? Colors.grey.shade300 : const Color(0xFFD68A96).withValues(alpha: 0.2), shape: BoxShape.circle), child: Icon(notif['type'] == 'Inventory' ? Icons.inventory_2_outlined : Icons.notifications_active_outlined, color: isRead ? Colors.grey : const Color(0xFFD68A96), size: 20)),
+                                      const SizedBox(width: 16),
+                                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(notif['title'] ?? 'Notification', style: TextStyle(fontWeight: FontWeight.w900, color: const Color(0xFF1C1B1F), fontSize: 14, decoration: isRead ? TextDecoration.lineThrough : null)), const SizedBox(height: 4), Text(notif['message'] ?? '', style: const TextStyle(color: Colors.black87, fontSize: 13)), const SizedBox(height: 4), Text(notif['created_at'] ?? '', style: const TextStyle(fontSize: 10, color: Colors.grey))])),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: SizedBox(width: double.infinity, height: 48, child: ElevatedButton(onPressed: () { Navigator.pop(context); setState(() => _selectedMenu = 'Inventory'); }, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD68A96), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0), child: const Text('Check Inventory', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)))),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _uploadProfileImage() async {
+    final picker = ImagePicker();
+    final image = await picker.pickImage(source: ImageSource.gallery);
+    if (image == null) return;
+    try {
+      final response = await ApiService.upload('employees/upload_profile_image', image.path, 'image');
+      final data = json.decode(response.body);
+      if (data['success']) {
+        if (!mounted) return;
+        setState(() { _profileImageUrl = data['profile_image']; });
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile picture updated!'), backgroundColor: Colors.green));
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Upload failed: ${data['message']}'), backgroundColor: Colors.red));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+    }
+  }
+
   int _getMenuIndex(String menu) {
     const menus = [
       'Dashboard', 'Products', 'Categories', 'Inventory', 'Employees',
@@ -825,7 +659,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
     int idx = menus.indexOf(menu);
     return idx != -1 ? idx : 0;
   }
-
 }
 
 class _TrianglePainter extends CustomPainter {
