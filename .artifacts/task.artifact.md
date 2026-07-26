@@ -1,0 +1,3 @@
+- [x] Create `sync_frontend.bat` local automation script
+- [x] Provide updated Render Dashboard configurations
+- [x] Verify script logic
