@@ -8,26 +8,22 @@ import {
   Get,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import type { Request } from 'express';
 import { FilesInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
+import { memoryStorage } from 'multer';
 
 @Controller('products')
 export class ProductsController {
-  constructor(private readonly productsService: ProductsService) {}
+  constructor(
+    private readonly productsService: ProductsService,
+    private readonly cloudinaryService: CloudinaryService,
+  ) {}
 
   @Post('add_product')
   @UseInterceptors(
     FilesInterceptor('images[]', 10, {
-      storage: diskStorage({
-        destination: './uploads',
-        filename: (req, file, callback) => {
-          const uniqueSuffix =
-            Date.now() + '-' + Math.round(Math.random() * 1e9);
-          callback(null, `prod-${uniqueSuffix}${extname(file.originalname)}`);
-        },
-      }),
+      storage: memoryStorage(),
     }),
   )
   async addProduct(
@@ -51,8 +47,11 @@ export class ProductsController {
     }
 
     if (files && files.length > 0) {
-      const newFilePaths = files.map((file) => `uploads/${file.filename}`);
-      finalImages = [...finalImages, ...newFilePaths];
+      // Upload each file to Cloudinary
+      const uploadPromises = files.map(file => this.cloudinaryService.uploadFile(file));
+      const results = await Promise.all(uploadPromises);
+      const newFileUrls = results.map(res => res.secure_url);
+      finalImages = [...finalImages, ...newFileUrls];
     }
 
     data.images = finalImages;

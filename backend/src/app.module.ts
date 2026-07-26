@@ -25,6 +25,7 @@ import { ReportsModule } from './reports/reports.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { CommunicationsModule } from './communications/communications.module';
 import { CommonModule } from './common/common.module';
+import { CloudinaryModule } from './cloudinary/cloudinary.module';
 
 @Module({
   imports: [
@@ -70,6 +71,7 @@ import { CommonModule } from './common/common.module';
     InventoryModule,
     CommunicationsModule,
     CommonModule,
+    CloudinaryModule,
   ],
   controllers: [AppController],
   providers: [AppService],

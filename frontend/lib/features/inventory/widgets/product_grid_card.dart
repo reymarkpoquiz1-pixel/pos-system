@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:pos/core/constants/config.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:pos/core/widgets/dashboard_widgets.dart';
 
 class ProductGridCard extends StatefulWidget {
   final Map<String, dynamic> product;
@@ -188,20 +190,32 @@ class _ProductGridCardState extends State<ProductGridCard> {
       );
     }
 
-    // 2. Fallback to Network Image
+    // 2. Fallback to Network Image (With Advanced Caching)
     if (displayImg.isNotEmpty) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(16),
-        child: Image.network(
-          _getImageUrl(displayImg),
+        child: CachedNetworkImage(
+          imageUrl: _getImageUrl(displayImg),
+          fit: BoxFit.contain,
           width: double.infinity,
           height: double.infinity,
-          fit: BoxFit.contain,
-          // Optimization: Limit cache size to save RAM
-          cacheWidth: 400,
-          errorBuilder: (context, error, stackTrace) {
-            return const Icon(Icons.image_outlined, color: Colors.grey, size: 36);
-          },
+          // Optimization: Scale down image in cache to save memory
+          maxWidthDiskCache: 400,
+          maxHeightDiskCache: 400,
+          placeholder: (context, url) => const Center(
+            child: SkeletonLoader(width: double.infinity, height: double.infinity, borderRadius: 16),
+          ),
+          errorWidget: (context, url, error) => Container(
+            color: Colors.grey.shade100,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.image_not_supported_outlined, color: Colors.grey.shade400, size: 32),
+                const SizedBox(height: 4),
+                Text('No Image', style: TextStyle(color: Colors.grey.shade400, fontSize: 8)),
+              ],
+            ),
+          ),
         ),
       );
     }

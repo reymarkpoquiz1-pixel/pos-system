@@ -34,7 +34,9 @@
     "pg": "^8.22.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "typeorm": "^1.1.0"
+    "typeorm": "^1.1.0",
+    "cloudinary": "^2.5.1",
+    "streamifier": "^0.1.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
