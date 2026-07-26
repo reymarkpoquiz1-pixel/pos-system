@@ -14,9 +14,10 @@ class BackgroundRemovalException implements Exception {
 }
 
 class BackgroundRemovalService {
-  /// Susubukan natin ang iba't ibang spaces kung sakaling down ang isa.
+  /// Susubukan natin ang iba't ibang spaces. Inuna natin ang 1.4 dahil mas stable ito at hindi gated.
   static const List<String> _spaceUrls = [
     'https://briaai-bria-rmbg-1-4.hf.space',
+    'https://huggingface.co/spaces/briaai/BRIA-RMBG-1.4',
     'https://briaai-bria-rmbg-2-0.hf.space',
   ];
 
@@ -35,8 +36,8 @@ class BackgroundRemovalService {
       final endpoints = [
         '$baseUrl/gradio_api/api/predict',
         '$baseUrl/api/predict',
-        '$baseUrl/gradio_api/run/predict',
         '$baseUrl/run/predict',
+        '$baseUrl/gradio_api/run/predict',
       ];
 
       for (var url in endpoints) {
