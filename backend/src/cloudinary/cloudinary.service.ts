@@ -13,6 +13,7 @@ export class CloudinaryService {
         },
         (error, result) => {
           if (error) return reject(error);
+          if (!result) return reject(new Error('Cloudinary upload failed: Empty result'));
           resolve(result);
         },
       );
