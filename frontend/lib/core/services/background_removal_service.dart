@@ -6,6 +6,13 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:io' as io;
 
+class BackgroundRemovalException implements Exception {
+  final String message;
+  BackgroundRemovalException(this.message);
+  @override
+  String toString() => message;
+}
+
 class BackgroundRemovalService {
   /// Gagamit tayo ng Stable Gradio 4 Queue API (Hugging Face)
   /// Sinusuportahan nito ang session hashing at SSE events.
@@ -26,7 +33,10 @@ class BackgroundRemovalService {
       debugPrint('Magic Clean: Calling Predict API (Base64)...');
       final response = await client.post(
         Uri.parse('$spaceUrl/api/predict'),
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
         body: jsonEncode({
           "data": [
             {
@@ -37,11 +47,16 @@ class BackgroundRemovalService {
           "fn_index": 0,
           "session_hash": sessionHash
         }),
-      ).timeout(const Duration(seconds: 45));
+      ).timeout(const Duration(seconds: 60), onTimeout: () {
+        throw BackgroundRemovalException('Request timed out (60s). The AI server might be busy.');
+      });
 
       if (response.statusCode != 200) {
         debugPrint('Magic Clean Predict Error: ${response.statusCode} - ${response.body}');
-        return null;
+        if (response.statusCode == 429) {
+          throw BackgroundRemovalException('AI Server is too busy (Rate Limited). Try again later.');
+        }
+        throw BackgroundRemovalException('Server Error (${response.statusCode}). Please try another image.');
       }
 
       final data = jsonDecode(response.body);
@@ -64,7 +79,7 @@ class BackgroundRemovalService {
               : '$spaceUrl/file=$imgPath';
           
           debugPrint('Magic Clean: Final Download URL: $fullUrl');
-          final imgRes = await http.get(Uri.parse(fullUrl));
+          final imgRes = await http.get(Uri.parse(fullUrl)).timeout(const Duration(seconds: 30));
           if (imgRes.statusCode == 200) {
             final resultBytes = imgRes.bodyBytes;
             if (kIsWeb) {
@@ -77,15 +92,20 @@ class BackgroundRemovalService {
               return XFile(cleanedFile.path);
             }
           } else {
-            debugPrint('Magic Clean: Download failed with status ${imgRes.statusCode}');
+            throw BackgroundRemovalException('Failed to download cleaned image (${imgRes.statusCode})');
           }
         }
       }
 
-      return null;
+      throw BackgroundRemovalException('AI processed the image but returned no result.');
+    } on BackgroundRemovalException catch (e) {
+      rethrow;
     } catch (e) {
       debugPrint('Magic Clean Exception: $e');
-      return null;
+      if (e.toString().contains('XMLHttpRequest error')) {
+        throw BackgroundRemovalException('Web Security (CORS) blocked the request. This can happen on some browsers.');
+      }
+      throw BackgroundRemovalException('An unexpected error occurred: $e');
     } finally {
       client.close();
     }

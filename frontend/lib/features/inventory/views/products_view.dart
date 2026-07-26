@@ -736,17 +736,18 @@ class _ProductsViewState extends State<ProductsView> {
             setState(() {
               _selectedImages[i] = cleanedXFile;
             });
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Failed to clean image ${i + 1}. Please try again.'), backgroundColor: Colors.orange)
-            );
           }
         }
       } catch (e) {
         debugPrint('Error cleaning image $i: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error cleaning image ${i + 1}: $e'), backgroundColor: Colors.red)
+            SnackBar(
+              content: Text('Magic Clean Error: $e'), 
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 5),
+              action: SnackBarAction(label: 'OK', textColor: Colors.white, onPressed: () {}),
+            )
           );
         }
       }
