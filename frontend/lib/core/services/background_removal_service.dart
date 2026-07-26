@@ -32,7 +32,10 @@ class BackgroundRemovalService {
 
     for (var baseUrl in _spaceUrls) {
       // Susubukan natin ang iba't ibang endpoint patterns
+      // Idinagdag ang /png dahil ito ang kailangan ng Bria 2.0
       final endpoints = [
+        '$baseUrl/api/png',
+        '$baseUrl/gradio_api/api/png',
         '$baseUrl/api/predict',
         '$baseUrl/gradio_api/api/predict',
         '$baseUrl/run/predict',
@@ -122,7 +125,14 @@ class BackgroundRemovalService {
                // Kung hindi 404, ibig sabihin nahanap ang server pero may payload error (422, 500, etc)
                // Subukan naman ang susunod na payload format.
                debugPrint('Magic Clean: $url returned ${response.statusCode}');
-               lastError = 'Server error (${response.statusCode}) from $url';
+               
+               String errorDetail = '';
+               try {
+                 final errorData = jsonDecode(response.body);
+                 errorDetail = ' - ${errorData["message"] ?? errorData["error"] ?? ""}';
+               } catch (_) {}
+               
+               lastError = 'Server error (${response.statusCode})$errorDetail from $url';
             } else {
                debugPrint('Magic Clean: $url returned 404');
                lastError = 'Endpoint not found (404) at $url';
