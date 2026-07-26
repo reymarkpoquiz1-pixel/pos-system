@@ -1,4 +1,4 @@
-- [x] Update `background_removal_service.dart` with advanced fallback logic
-- [x] Implement Bria 2.0 specific `/png` endpoints and error handling
-- [x] Include explicit `api_name` in payload to resolve 500 error
-- [/] Inform user to sync and push
+- [x] Revert `background_removal_service.dart` to stable Bria 1.4
+- [x] Implement smart payload fallback logic
+- [x] Add detailed error reporting in `products_view.dart`
+- [x] Verify script paths and push instructions

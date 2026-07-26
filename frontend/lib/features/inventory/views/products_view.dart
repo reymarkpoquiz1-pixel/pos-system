@@ -743,13 +743,24 @@ class _ProductsViewState extends State<ProductsView> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Magic Clean Error: $e'), 
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 5),
-              action: SnackBarAction(label: 'OK', textColor: Colors.white, onPressed: () {}),
-            )
+              content: Row(
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(e.toString())),
+                ],
+              ),
+              backgroundColor: Colors.red.shade800,
+              duration: const Duration(seconds: 8),
+              action: SnackBarAction(
+                label: 'RETRY',
+                textColor: Colors.white,
+                onPressed: () => _cleanAllLocalImages(),
+              ),
+            ),
           );
         }
+        break; // Stop cleaning other images if one fails
       }
     }
 
