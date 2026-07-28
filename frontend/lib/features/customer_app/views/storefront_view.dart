@@ -147,28 +147,22 @@ class _StoreFrontViewState extends State<StoreFrontView> {
                           ),
                           const SizedBox(width: 16),
                           // RIGHT SIDE: 2 Top Featured Cards side-by-side
-                          Expanded(
-                            flex: 4,
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: _products.isNotEmpty
-                                      ? _buildTopFeaturedCard(_products[0], "Premium Leather Tote")
-                                      : const SizedBox(),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: _products.length > 1
-                                      ? _buildTopFeaturedCard(_products[1], "Artisan Weave Bag")
-                                      : const SizedBox(),
-                                ),
-                              ],
+                          if (_products.isNotEmpty)
+                            Expanded(
+                              flex: 4,
+                              child: Row(
+                                children: [
+                                  Expanded(child: _buildTopFeaturedCard(_products[0], _products[0]['product_line'] ?? 'Featured')),
+                                  if (_products.length > 1) ...[
+                                    const SizedBox(width: 8),
+                                    Expanded(child: _buildTopFeaturedCard(_products[1], _products[1]['product_line'] ?? 'Trending')),
+                                  ],
+                                ],
+                              ),
                             ),
-                          ),
                         ],
                       ),
-                      const SizedBox(height: 20),
-                      // BOTTOM SECTION: Main Product Grid (4 Columns)
+                      const SizedBox(height: 24),
                       _buildMainProductGrid(),
                     ],
                   ),
@@ -282,12 +276,9 @@ class _StoreFrontViewState extends State<StoreFrontView> {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          _buildCategoryItem('0', 'Shoulder Bags', Icons.shopping_bag_outlined),
-          _buildCategoryItem('1', 'Backpacks', Icons.backpack_outlined),
-          _buildCategoryItem('2', 'Travel Bags', Icons.card_travel),
-          _buildCategoryItem('3', 'Accessories', Icons.account_balance_wallet_outlined),
+          _buildCategoryItem('0', 'All Categories', Icons.grid_view_rounded),
           if (_categories.isNotEmpty)
-            ..._categories.map((cat) => _buildCategoryItem(cat['id'].toString(), cat['name'], Icons.category_outlined)),
+            ..._categories.map((cat) => _buildCategoryItem(cat['id'].toString(), cat['name'] ?? 'Category', Icons.category_outlined)),
         ],
       ),
     );
@@ -410,7 +401,18 @@ class _StoreFrontViewState extends State<StoreFrontView> {
       ),
       itemCount: gridProducts.length,
       itemBuilder: (context, index) {
-        return _buildStandardProductCard(gridProducts[index], isStaffFavorite: index == 2);
+        final prod = gridProducts[index];
+        // Dynamic check: Show "STAFF" badge only if product has the 'staff favorite' tag
+        bool isStaffFavorite = false;
+        if (prod['tags'] != null) {
+          try {
+            var tagsData = prod['tags'];
+            List<dynamic> tagsList = (tagsData is String) ? json.decode(tagsData) : tagsData;
+            isStaffFavorite = tagsList.any((t) => t.toString().toLowerCase() == 'staff favorite');
+          } catch (_) {}
+        }
+
+        return _buildStandardProductCard(prod, isStaffFavorite: isStaffFavorite);
       },
     );
   }

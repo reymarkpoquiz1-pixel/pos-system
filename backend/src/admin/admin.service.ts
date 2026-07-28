@@ -53,7 +53,9 @@ export class AdminService {
       hourlySalesRaw,
       paymentMethodsRaw,
       monthlyStats,
+      topSellingRaw,
     ] = await Promise.all([
+      // ... previous items 1-12
       // 1. Today's Sales
       this.saleRepository
         .createQueryBuilder('sale')
@@ -149,6 +151,20 @@ export class AdminService {
           end: endOfDay,
         })
         .getRawOne(),
+
+      // 14. Top Selling Products (Actual Sales)
+      this.dataSource
+        .createQueryBuilder()
+        .select('p.id', 'id')
+        .addSelect('p.name', 'name')
+        .addSelect('p.imageUrl', 'imageUrl')
+        .addSelect('SUM(item.quantity)', 'total_sold')
+        .from(Product, 'p')
+        .innerJoin('sale_items', 'item', 'item.product_id = p.id')
+        .groupBy('p.id')
+        .orderBy('total_sold', 'DESC')
+        .limit(5)
+        .getRawMany(),
     ]);
 
     // Fetch recent sales separately (smaller limit for initial data)
@@ -212,7 +228,12 @@ export class AdminService {
         })),
       },
       products: mappedProducts,
-      top_selling_products: mappedProducts.slice(0, 5),
+      top_selling_products: topSellingRaw.map((p) => ({
+        id: p.id,
+        name: p.name,
+        total_sold: parseInt(p.total_sold),
+        image_url: p.imageUrl ? p.imageUrl.split(',')[0] : null,
+      })),
       categories: allCategories,
       employees: allEmployees.map((e) => ({
         user_id: e.id,

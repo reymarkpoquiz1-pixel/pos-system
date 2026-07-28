@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:pos/features/inventory/utils/product_utils.dart';
+import 'package:pos/core/constants/config.dart';
+import 'package:pos/core/services/api_service.dart';
+import 'dart:convert';
 
 class ProductDialogs {
   static void showAddTagDialog({
@@ -205,5 +208,109 @@ class ProductDialogs {
         }
       ),
     );
+  }
+
+  static void showArchivedProductsDialog(BuildContext context, List<dynamic> productsList, VoidCallback onRefresh) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final archivedItems = productsList.where((p) => (p['status'] ?? 'Active') == 'Archived').toList();
+            
+            return AlertDialog(
+              backgroundColor: const Color(0xFFFBECEF),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              title: Row(
+                children: [
+                  const Icon(Icons.archive_outlined, color: Color(0xFFD68A96)),
+                  const SizedBox(width: 10),
+                  const Text('Archived Products', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Spacer(),
+                  IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
+                ],
+              ),
+              content: SizedBox(
+                width: 500,
+                height: 400,
+                child: archivedItems.isEmpty
+                    ? const Center(child: Text('No archived products found.'))
+                    : ListView.separated(
+                        itemCount: archivedItems.length,
+                        separatorBuilder: (context, index) => const Divider(),
+                        itemBuilder: (context, index) {
+                          final item = archivedItems[index];
+                          return ListTile(
+                            leading: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                image: item['image_url'] != null
+                                    ? DecorationImage(
+                                        image: NetworkImage(item['image_url'].toString().startsWith('http') 
+                                            ? item['image_url'] 
+                                            : '$baseUrl/${item['image_url']}'),
+                                        fit: BoxFit.cover)
+                                    : null,
+                              ),
+                              child: item['image_url'] == null ? const Icon(Icons.image) : null,
+                            ),
+                            title: Text(item['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+                            subtitle: Text('ID: ${item['id']} • ₱${item['selling_price']}'),
+                            trailing: ElevatedButton.icon(
+                              onPressed: () async {
+                                final res = await _restoreArchivedItem(context, item['id'], item['name']);
+                                if (res) {
+                                  onRefresh();
+                                  setDialogState(() {}); // Refresh dialog list
+                                }
+                              },
+                              icon: const Icon(Icons.unarchive, size: 16),
+                              label: const Text('Restore', style: TextStyle(fontSize: 11)),
+                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD68A96), foregroundColor: Colors.white),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  static Future<bool> _restoreArchivedItem(BuildContext context, dynamic id, String name) async {
+    try {
+      final response = await ApiService.post('products/restore_product', {'id': id.toString()});
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('"$name" restored successfully!')));
+          return true;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error restoring item: $e');
+    }
+    return false;
+  }
+
+  static Future<bool> showArchiveConfirmation(BuildContext context, String productName) async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Archive Product?'),
+        content: Text('Are you sure you want to archive "$productName"?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Archive', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    ) ?? false;
   }
 }

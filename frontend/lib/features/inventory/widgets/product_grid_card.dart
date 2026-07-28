@@ -184,9 +184,25 @@ class _ProductGridCardState extends State<ProductGridCard> {
     if (localPath != null && localPath.isNotEmpty) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(16),
-        child: kIsWeb 
-          ? Image.network(localPath, fit: BoxFit.contain)
-          : Image.file(File(localPath), fit: BoxFit.contain),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            kIsWeb 
+              ? Image.network(localPath, fit: BoxFit.contain)
+              : Image.file(File(localPath), fit: BoxFit.contain),
+            // Syncing Overlay
+            Container(
+              color: Colors.black26,
+              child: const Center(
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                ),
+              ),
+            ),
+          ],
+        ),
       );
     }
 

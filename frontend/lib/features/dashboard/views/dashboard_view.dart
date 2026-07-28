@@ -549,7 +549,7 @@ class DashboardView extends StatelessWidget {
               )),
             )
           else if (displayProducts.isEmpty)
-            const Text('Walang data ng benta.', style: TextStyle(fontSize: 12, color: Colors.grey))
+            const Text('No sales data yet.', style: TextStyle(fontSize: 12, color: Colors.grey))
           else
             ...displayProducts.map((prod) {
               String name = prod['name'] ?? 'Unknown Item';
@@ -640,11 +640,11 @@ class DashboardView extends StatelessWidget {
                 child: Icon(Icons.notifications_active, color: lowStockCount > 0 ? Colors.red : Colors.green, size: 18),
               ),
               title: Text(
-                lowStockCount > 0 ? '$lowStockCount na Produkto ang Paubos' : 'Ligtas ang Lahat ng Stocks',
+                lowStockCount > 0 ? '$lowStockCount Products are Running Low' : 'All Stocks are Healthy',
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: textDark),
               ),
               subtitle: Text(
-                lowStockCount > 0 ? 'Kailangan nang mag-reorder sa supplier.' : 'Sapat ang bilangan ng iyong imbentaryo.',
+                lowStockCount > 0 ? 'Needs reordering from supplier.' : 'Your inventory levels are sufficient.',
                 style: const TextStyle(fontSize: 11, color: Colors.grey),
               ),
             ),

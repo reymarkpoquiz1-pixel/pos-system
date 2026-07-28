@@ -141,16 +141,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
   void _handleProductUpdate(dynamic updatedProduct) {
     setState(() {
       List<dynamic> newList = List.from(_productsList);
+      
+      // Find the item by its real ID or its temporary ID
       int index = newList.indexWhere((p) => p['id'].toString() == updatedProduct['id'].toString());
+      
+      // If not found by real ID, check if it's a replacement for an optimistic temporary ID
+      if (index == -1 && updatedProduct['temp_id'] != null) {
+        index = newList.indexWhere((p) => p['id'].toString() == updatedProduct['temp_id'].toString());
+      }
+
       if (updatedProduct['status'] == 'Archived') {
         if (index != -1) newList.removeAt(index);
       } else {
         if (index != -1) {
-          if (newList[index]['local_image_path'] != null && updatedProduct['local_image_path'] == null) {
-            updatedProduct['local_image_path'] = newList[index]['local_image_path'];
-          }
+          // Update existing item with server data
+          // Note: local_image_path is intentionally NOT preserved here 
+          // to allow the UI to transition from local preview to network image.
           newList[index] = updatedProduct;
         } else {
+          // If totally new (not found by ID or temp_id), insert at top
           newList.insert(0, updatedProduct);
         }
       }
