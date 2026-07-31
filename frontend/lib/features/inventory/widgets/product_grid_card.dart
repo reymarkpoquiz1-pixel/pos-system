@@ -253,216 +253,253 @@ class _ProductGridCardState extends State<ProductGridCard> {
 
     return GestureDetector(
       onTap: widget.onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
+      child: LayoutBuilder(
+        builder: (context, box) {
+          return Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Image Section - Adjusted flex for a slimmer look
-              Expanded(
-                flex: 8,
-                child: Stack(
-                  children: [
-                    Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFBF4F6),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: _buildMainImage(prod, displayImg),
-                    ),
-                    if (isOutOfStock || isLowStock)
-                      Positioned(
-                        top: 8,
-                        left: 8,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: isOutOfStock ? Colors.red.withValues(alpha: 0.9) : Colors.orange.withValues(alpha: 0.9),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            isOutOfStock ? 'OUT' : 'LOW',
-                            style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ),
-                    // Thumbnails Overlay
-                    if (_images.length > 1)
-                      Positioned(
-                        bottom: 10,
-                        left: 10,
-                        child: Row(
-                          children: _images.asMap().entries.take(4).map((entry) {
-                            int idx = entry.key;
-                            String url = entry.value;
-                            bool isActive = _activeImgIdx == idx;
-                            return GestureDetector(
-                              onTap: () {
-                                setState(() => _activeImgIdx = idx);
-                              },
-                              child: Container(
-                                margin: const EdgeInsets.only(right: 6),
-                                width: 28,
-                                height: 28,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: isActive ? const Color(0xFFD68A96) : Colors.white,
-                                    width: 2,
-                                  ),
-                                  image: DecorationImage(
-                                    image: NetworkImage(_getImageUrl(url)),
-                                    fit: BoxFit.cover,
-                                    onError: (exception, stackTrace) {
-                                      debugPrint('Thumbnail image error: $exception');
-                                    },
-                                  ),
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-
-              // Product Line
-              Text(
-                styleLabel,
-                style: const TextStyle(fontSize: 10, color: Colors.black, fontWeight: FontWeight.w900),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 4),
-
-              // Product Name - Increased for readability
-              Text(
-                prod['name'] ?? '',
-                style: const TextStyle(
-                  fontFamily: 'serif',
-                  fontWeight: FontWeight.w500,
-                  fontSize: 16,
-                  color: Colors.black,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-
-              // Category (Subtext)
-              if (prod['category_name'] != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Text(
-                    prod['category_name'].toString().toUpperCase(),
-                    style: const TextStyle(fontSize: 9, color: Colors.black87, fontWeight: FontWeight.w900, letterSpacing: 0.2),
-                  ),
-                ),
-
-              const SizedBox(height: 8),
-
-              // Tags
-              if (prod['tags'] != null && prod['tags'].toString().isNotEmpty && prod['tags'].toString() != '[]')
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Wrap(
-                    spacing: 6,
-                    children: _parseTags(prod['tags']).map((tag) => Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFDECEE),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        '#$tag',
-                        style: const TextStyle(fontSize: 9, color: Color(0xFFD68A96), fontWeight: FontWeight.w600),
-                      ),
-                    )).toList(),
-                  ),
-                ),
-
-              // Bottom Details Row with LayoutBuilder
-              LayoutBuilder(
-                builder: (context, box) {
-                  bool isNarrow = box.maxWidth < 220;
-
-                  return IntrinsicHeight(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Image Section - Adjusted flex based on height to prevent overflow
+                  Expanded(
+                    flex: box.maxHeight < 280 ? 6 : 8,
+                    child: Stack(
                       children: [
-                        Expanded(
-                          flex: 5,
-                          child: _buildVariantsSummary(prod['variants'], styleLabel, box.maxWidth),
+                        Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFBF4F6),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: _buildMainImage(prod, displayImg),
                         ),
-                        VerticalDivider(width: isNarrow ? 8 : 16, thickness: 1, color: Colors.black12),
-                        Expanded(
-                          flex: 3,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              FittedBox(
-                                fit: BoxFit.scaleDown,
-                                alignment: Alignment.centerLeft,
-                                child: Text(
-                                  '₱${prod['selling_price'] ?? '0.00'}',
-                                  style: const TextStyle(fontSize: 16, color: Colors.black, fontWeight: FontWeight.w900),
-                                ),
+                        if (isOutOfStock || isLowStock)
+                          Positioned(
+                            top: 8,
+                            left: 8,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: isOutOfStock ? Colors.red.withValues(alpha: 0.9) : Colors.orange.withValues(alpha: 0.9),
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                              const SizedBox(height: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFE8F5E9),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.inventory_2_outlined, size: 10, color: Color(0xFF4CAF50)),
-                                    const SizedBox(width: 4),
-                                    Flexible(
-                                      child: FittedBox(
-                                        fit: BoxFit.scaleDown,
-                                        child: Text(
-                                          'STOCK: $stock',
-                                          style: const TextStyle(
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.w900,
-                                            color: Color(0xFF4CAF50),
-                                          ),
-                                        ),
+                              child: Text(
+                                isOutOfStock ? 'OUT' : 'LOW',
+                                style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ),
+                        // Thumbnails Overlay
+                        if (_images.length > 1)
+                          Positioned(
+                            bottom: 10,
+                            left: 10,
+                            child: Row(
+                              children: _images.asMap().entries.take(4).map((entry) {
+                                int idx = entry.key;
+                                String url = entry.value;
+                                bool isActive = _activeImgIdx == idx;
+                                return GestureDetector(
+                                  onTap: () {
+                                    setState(() => _activeImgIdx = idx);
+                                  },
+                                  child: Container(
+                                    margin: const EdgeInsets.only(right: 6),
+                                    width: 28,
+                                    height: 28,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: isActive ? const Color(0xFFD68A96) : Colors.white,
+                                        width: 2,
+                                      ),
+                                      image: DecorationImage(
+                                        image: NetworkImage(_getImageUrl(url)),
+                                        fit: BoxFit.cover,
+                                        onError: (exception, stackTrace) {
+                                          debugPrint('Thumbnail image error: $exception');
+                                        },
                                       ),
                                     ),
-                                  ],
-                                ),
-                              ),
-                            ],
+                                  ),
+                                );
+                              }).toList(),
+                            ),
                           ),
-                        ),
                       ],
                     ),
-                  );
-                }
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Product Line
+                  Text(
+                    styleLabel,
+                    style: const TextStyle(fontSize: 10, color: Colors.black, fontWeight: FontWeight.w900),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+
+                  // Product Name
+                  Text(
+                    prod['name'] ?? '',
+                    style: TextStyle(
+                      fontFamily: 'serif',
+                      fontWeight: FontWeight.w500,
+                      fontSize: box.maxWidth < 180 ? 13 : 15,
+                      color: Colors.black,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+
+                  // Category (Subtext)
+                  if (prod['category_name'] != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        prod['category_name'].toString().toUpperCase(),
+                        style: TextStyle(fontSize: box.maxWidth < 180 ? 7 : 9, color: Colors.black87, fontWeight: FontWeight.w900, letterSpacing: 0.2),
+                      ),
+                    ),
+
+                  const SizedBox(height: 8),
+
+                  // Tags (Only show if enough height)
+                  if (box.maxHeight > 300 && prod['tags'] != null && prod['tags'].toString().isNotEmpty && prod['tags'].toString() != '[]')
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Wrap(
+                        spacing: 6,
+                        children: _parseTags(prod['tags']).take(box.maxWidth < 180 ? 1 : 2).map((tag) => Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFDECEE),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '#$tag',
+                            style: const TextStyle(fontSize: 8, color: Color(0xFFD68A96), fontWeight: FontWeight.w600),
+                          ),
+                        )).toList(),
+                      ),
+                    ),
+
+                  // Bottom Details Row with LayoutBuilder
+                  LayoutBuilder(
+                    builder: (context, innerBox) {
+                      bool isVeryNarrow = innerBox.maxWidth < 180;
+
+                      if (isVeryNarrow) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildVariantsSummary(prod['variants'], styleLabel, innerBox.maxWidth),
+                            const Divider(height: 12, thickness: 0.5, color: Colors.black12),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    '₱${prod['selling_price'] ?? '0.00'}',
+                                    style: const TextStyle(fontSize: 13, color: Colors.black, fontWeight: FontWeight.w900),
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFE8F5E9),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    'S:$stock',
+                                    style: const TextStyle(fontSize: 7, fontWeight: FontWeight.w900, color: Color(0xFF4CAF50)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        );
+                      }
+
+                      return IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              flex: 5,
+                              child: _buildVariantsSummary(prod['variants'], styleLabel, innerBox.maxWidth),
+                            ),
+                            VerticalDivider(width: innerBox.maxWidth < 220 ? 8 : 16, thickness: 1, color: Colors.black12),
+                            Expanded(
+                              flex: 4,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      '₱${prod['selling_price'] ?? '0.00'}',
+                                      style: const TextStyle(fontSize: 14, color: Colors.black, fontWeight: FontWeight.w900),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFE8F5E9),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.inventory_2_outlined, size: 8, color: Color(0xFF4CAF50)),
+                                        const SizedBox(width: 4),
+                                        Flexible(
+                                          child: FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            child: Text(
+                                              'STK: $stock',
+                                              style: const TextStyle(
+                                                fontSize: 8,
+                                                fontWeight: FontWeight.w900,
+                                                color: Color(0xFF4CAF50),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }

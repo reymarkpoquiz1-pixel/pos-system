@@ -32,28 +32,43 @@ class ProductMasterList extends StatelessWidget {
       return const Center(child: Text('No products found.'));
     }
 
-    return GridView.builder(
-      padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        childAspectRatio: 0.75,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-      ),
-      itemCount: _filteredProducts.length,
-      itemBuilder: (context, index) {
-        final prod = _filteredProducts[index];
-        final isSelected = selectedProduct != null && selectedProduct['id'].toString() == prod['id'].toString();
-        
-        return Container(
-          decoration: isSelected ? BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFD68A96), width: 2),
-          ) : null,
-          child: ProductGridCard(
-            product: prod,
-            onTap: () => onSelectProduct(prod),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Dynamic grid configuration
+        int crossAxisCount = 3;
+        double aspectRatio = 0.75;
+
+        if (constraints.maxWidth < 600) {
+          crossAxisCount = 2; // 2 columns for mobile
+          aspectRatio = 0.65; // Taller cards for mobile to prevent overflow
+        } else if (constraints.maxWidth > 1200) {
+          crossAxisCount = 4; // 4 columns for large screens
+        }
+
+        return GridView.builder(
+          padding: const EdgeInsets.all(16),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            childAspectRatio: aspectRatio,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
           ),
+          itemCount: _filteredProducts.length,
+          itemBuilder: (context, index) {
+            final prod = _filteredProducts[index];
+            final isSelected = selectedProduct != null && selectedProduct['id'].toString() == prod['id'].toString();
+            
+            return Container(
+              decoration: isSelected ? BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFD68A96), width: 2),
+              ) : null,
+              child: ProductGridCard(
+                product: prod,
+                onTap: () => onSelectProduct(prod),
+              ),
+            );
+          },
         );
       },
     );

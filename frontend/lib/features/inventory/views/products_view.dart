@@ -212,9 +212,13 @@ class _ProductsViewState extends State<ProductsView> {
                     child: Container(color: Colors.black26),
                   ),
                   Positioned(
-                    right: 20, top: 20, bottom: 20,
-                    width: isNarrow ? constraints.maxWidth * 0.9 : 750,
-                    child: ProductDetailsPanel(
+                    right: isNarrow ? 0 : 20,
+                    top: isNarrow ? 0 : 20,
+                    bottom: isNarrow ? 0 : 20,
+                    width: isNarrow ? constraints.maxWidth : 750,
+                    child: Padding(
+                      padding: isNarrow ? const EdgeInsets.all(8.0) : EdgeInsets.zero,
+                      child: ProductDetailsPanel(
                       panelTitle: _panelTitle,
                       nameController: _formController.nameController,
                       barcodeController: _formController.barcodeController,
@@ -308,10 +312,10 @@ class _ProductsViewState extends State<ProductsView> {
                         if (_selectedProduct == null) return;
                         final confirmed = await ProductDialogs.showArchiveConfirmation(context, _selectedProduct!['name']);
                         if (confirmed && mounted) {
+                          final messenger = ScaffoldMessenger.of(context);
                           final success = await ProductService.archiveProduct(_selectedProduct!['id']);
                           if (success && mounted) {
-                            final scaffoldMessenger = ScaffoldMessenger.of(context);
-                            scaffoldMessenger.showSnackBar(const SnackBar(content: Text('Archived')));
+                            messenger.showSnackBar(const SnackBar(content: Text('Archived')));
                             widget.onRefresh();
                             setState(() => _showDetails = false);
                           }
@@ -319,12 +323,13 @@ class _ProductsViewState extends State<ProductsView> {
                       },
                     ),
                   ),
-                ],
+                ),
               ],
-            );
-          },
-        ),
+            ],
+          );
+        },
       ),
+    ),
     );
   }
 }
