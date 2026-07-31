@@ -18,7 +18,7 @@ dependencies:
   shared_preferences: ^2.3.2
   pdf: ^3.10.8
   printing: ^5.11.1
-  mobile_scanner: ^7.3.0
+  mobile_scanner: ^7.3.1
   esc_pos_utils_plus: ^2.0.3
   connectivity_plus: ^6.0.3
   cached_network_image: ^3.4.1
