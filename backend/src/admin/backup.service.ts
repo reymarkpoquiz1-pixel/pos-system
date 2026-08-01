@@ -44,8 +44,9 @@ export class BackupService {
         file: filename,
       };
     } catch (error) {
-      this.logger.error(`Backup failed: ${error.message}`);
-      return { success: false, message: 'Backup failed', error: error.message };
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Backup failed: ${errorMessage}`);
+      return { success: false, message: 'Backup failed', error: errorMessage };
     }
   }
 }

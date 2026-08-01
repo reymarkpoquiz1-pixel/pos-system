@@ -12,7 +12,7 @@ export class CloudinaryService {
           folder: 'pos_products',
         },
         (error, result) => {
-          if (error) return reject(new Error(error.message));
+          if (error) return reject(new Error(error.message || 'Cloudinary upload failed'));
           if (!result)
             return reject(new Error('Cloudinary upload failed: Empty result'));
           resolve(result);
@@ -35,7 +35,7 @@ export class CloudinaryService {
         `data:image/png;base64,${cleanBase64}`,
         { folder },
         (error, result) => {
-          if (error) return reject(new Error(error.message));
+          if (error) return reject(new Error(error.message || 'Cloudinary upload failed'));
           if (!result)
             return reject(new Error('Cloudinary upload failed: Empty result'));
           resolve(result);

@@ -21,9 +21,10 @@ export class SalesController {
       const user = req.user;
       return await this.salesService.placeOrder(orderData, user.id, user.role);
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred while placing the order';
       return {
         success: false,
-        message: error.message || 'An error occurred while placing the order',
+        message: errorMessage,
       };
     }
   }

@@ -213,7 +213,7 @@ export class SalesService {
 
   async getShiftHistory() {
     return await this.saleRepository.find({
-      relations: ['user', 'branch'],
+      relations: { user: true, branch: true },
       order: { transactionDate: 'DESC' },
       take: 20,
     });
