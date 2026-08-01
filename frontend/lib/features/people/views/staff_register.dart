@@ -95,20 +95,13 @@ class _AdminUserManagementFormState extends State<AdminUserManagementForm> {
 
     if (email.isEmpty || fullName.isEmpty || username.isEmpty || terminalId.isEmpty || 
         (!isEditing && password.isEmpty) || _selectedRole == null || _selectedGender == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in all fields including Role and Gender!'), backgroundColor: Colors.redAccent),
-      );
+      _showValidationError('Please fill in all fields including Role and Gender!');
       return;
     }
 
     // Validation for Full Name (must contain at least one space)
     if (!fullName.trim().contains(' ')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Mangyaring ilagay ang buong pangalan (hal: Juan Dela Cruz) na may space sa gitna.'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      _showValidationError('Please enter the full name (e.g., Juan Dela Cruz) with a space in between.');
       return;
     }
 
@@ -158,11 +151,11 @@ class _AdminUserManagementFormState extends State<AdminUserManagementForm> {
         Navigator.pop(context);
       } else {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data['message'] ?? 'Error'), backgroundColor: Colors.redAccent));
+        _showValidationError(data['message'] ?? 'Error occurred while saving.');
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.redAccent));
+      _showValidationError('Error: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -346,6 +339,29 @@ class _AdminUserManagementFormState extends State<AdminUserManagementForm> {
           ),
         ),
       ],
+    );
+  }
+
+  void _showValidationError(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange),
+            SizedBox(width: 10),
+            Text('Validation Error'),
+          ],
+        ),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      ),
     );
   }
 }
