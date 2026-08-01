@@ -7,6 +7,7 @@ import { Product } from '../products/entities/product.entity';
 import { Category } from '../categories/entities/category.entity';
 import { Customer } from '../customers/entities/customer.entity';
 import { SettingsService } from '../settings/settings.service';
+import { Gender } from '../staff/entities/staff.entity';
 
 @Injectable()
 export class AdminService {
