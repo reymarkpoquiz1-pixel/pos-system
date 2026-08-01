@@ -8,11 +8,12 @@ import { User } from '../users/entities/user.entity';
 import { Product } from '../products/entities/product.entity';
 import { Category } from '../categories/entities/category.entity';
 import { Customer } from '../customers/entities/customer.entity';
+import { Staff } from '../staff/entities/staff.entity';
 import { SettingsModule } from '../settings/settings.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Sale, User, Product, Category, Customer]),
+    TypeOrmModule.forFeature([Sale, User, Product, Category, Customer, Staff]),
     SettingsModule,
   ],
   providers: [AdminService, BackupService],
