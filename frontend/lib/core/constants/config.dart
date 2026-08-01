@@ -1,5 +1,4 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 
 // Switch for Local Development vs Live Testing
 // Set to 'false' before deploying to Render for the Live Website
@@ -21,7 +20,7 @@ String get baseUrl {
   // Mobile Development:
   if (!kIsWeb) {
     try {
-      if (Platform.isAndroid) {
+      if (defaultTargetPlatform == TargetPlatform.android) {
         return 'http://10.0.2.2:3000';
       }
     } catch (e) {

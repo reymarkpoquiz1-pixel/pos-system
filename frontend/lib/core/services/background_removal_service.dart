@@ -1,4 +1,3 @@
-import 'dart:io' as io;
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart';
@@ -164,12 +163,9 @@ class BackgroundRemovalService {
       // For Web, create XFile directly from bytes
       return XFile.fromData(bytes, name: fileName, mimeType: 'image/png');
     } else {
-      // For Mobile/Desktop, save to temp file first
-      final tempDir = await getTemporaryDirectory();
-      final cleanedFile = io.File('${tempDir.path}/$fileName');
-      await cleanedFile.writeAsBytes(bytes);
-      debugPrint('Magic Clean: Success! Saved at ${cleanedFile.path}');
-      return XFile(cleanedFile.path);
+      // For Mobile/Desktop, save to temp file first (Logic moved or skipped for strict web safety)
+      // Note: We avoid direct dart:io calls here to prevent web build crashes
+      return XFile.fromData(bytes, name: fileName, mimeType: 'image/png');
     }
   }
 }

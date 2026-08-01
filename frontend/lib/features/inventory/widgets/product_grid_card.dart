@@ -1,5 +1,5 @@
-import 'dart:io' show File;
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:pos/core/utils/file_utils.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:pos/core/constants/config.dart';
@@ -187,9 +187,7 @@ class _ProductGridCardState extends State<ProductGridCard> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            kIsWeb 
-              ? Image.network(localPath, fit: BoxFit.contain)
-              : _buildFileImage(localPath),
+            getFileImageWidget(localPath, fit: BoxFit.contain),
             // Syncing Overlay
             Container(
               color: Colors.black26,
@@ -502,9 +500,5 @@ class _ProductGridCardState extends State<ProductGridCard> {
         },
       ),
     );
-  }
-
-  Widget _buildFileImage(String path) {
-    return Image.file(File(path), fit: BoxFit.contain);
   }
 }

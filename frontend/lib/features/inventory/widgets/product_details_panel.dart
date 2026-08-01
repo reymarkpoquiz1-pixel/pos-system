@@ -1,4 +1,5 @@
-import 'dart:io' show File;
+import 'dart:typed_data';
+import 'package:pos/core/utils/file_utils.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart' show XFile;
@@ -225,7 +226,10 @@ class ProductDetailsPanel extends StatelessWidget {
                           onError: (exception, stackTrace) => debugPrint('Image error'),
                         )
                       : (activeImageIndex - serverImages.length < selectedImages.length)
-                          ? DecorationImage(image: kIsWeb ? NetworkImage(selectedImages[activeImageIndex - serverImages.length].path) : FileImage(File(selectedImages[activeImageIndex - serverImages.length].path)) as ImageProvider, fit: BoxFit.contain)
+                          ? DecorationImage(
+                              image: getFileImageProvider(selectedImages[activeImageIndex - serverImages.length].path), 
+                              fit: BoxFit.contain
+                            )
                           : null,
                 ),
                 child: isProcessingImage
@@ -314,9 +318,7 @@ class ProductDetailsPanel extends StatelessWidget {
                               borderRadius: BorderRadius.circular(8),
                               border: activeImageIndex == displayIdx ? Border.all(color: const Color(0xFFD68A96), width: 2) : null,
                               image: DecorationImage(
-                                image: kIsWeb 
-                                  ? NetworkImage(entry.value.path) 
-                                  : _buildFileImageProvider(entry.value.path), 
+                                image: getFileImageProvider(entry.value.path), 
                                 fit: BoxFit.cover
                               ),
                             ),
@@ -533,9 +535,5 @@ class ProductDetailsPanel extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  ImageProvider _buildFileImageProvider(String path) {
-    return FileImage(File(path));
   }
 }
