@@ -19,12 +19,14 @@ String get baseUrl {
   }
 
   // Mobile Development:
-  try {
-    if (Platform.isAndroid) {
-      return 'http://10.0.2.2:3000';
+  if (!kIsWeb) {
+    try {
+      if (Platform.isAndroid) {
+        return 'http://10.0.2.2:3000';
+      }
+    } catch (e) {
+      // Fallback
     }
-  } catch (e) {
-    // Fallback
   }
 
   return 'http://localhost:3000';

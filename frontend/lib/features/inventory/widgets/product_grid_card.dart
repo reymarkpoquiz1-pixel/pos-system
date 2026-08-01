@@ -189,7 +189,7 @@ class _ProductGridCardState extends State<ProductGridCard> {
           children: [
             kIsWeb 
               ? Image.network(localPath, fit: BoxFit.contain)
-              : Image.file(File(localPath), fit: BoxFit.contain),
+              : _buildFileImage(localPath),
             // Syncing Overlay
             Container(
               color: Colors.black26,
@@ -502,5 +502,9 @@ class _ProductGridCardState extends State<ProductGridCard> {
         },
       ),
     );
+  }
+
+  Widget _buildFileImage(String path) {
+    return Image.file(File(path), fit: BoxFit.contain);
   }
 }

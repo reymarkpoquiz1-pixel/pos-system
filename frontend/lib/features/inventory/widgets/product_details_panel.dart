@@ -313,7 +313,12 @@ class ProductDetailsPanel extends StatelessWidget {
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
                               border: activeImageIndex == displayIdx ? Border.all(color: const Color(0xFFD68A96), width: 2) : null,
-                              image: DecorationImage(image: kIsWeb ? NetworkImage(entry.value.path) : FileImage(File(entry.value.path)) as ImageProvider, fit: BoxFit.cover),
+                              image: DecorationImage(
+                                image: kIsWeb 
+                                  ? NetworkImage(entry.value.path) 
+                                  : _buildFileImageProvider(entry.value.path), 
+                                fit: BoxFit.cover
+                              ),
                             ),
                           ),
                           if (isEditing)
@@ -528,5 +533,9 @@ class ProductDetailsPanel extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  ImageProvider _buildFileImageProvider(String path) {
+    return FileImage(File(path));
   }
 }
