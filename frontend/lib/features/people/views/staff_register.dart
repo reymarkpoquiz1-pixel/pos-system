@@ -108,8 +108,16 @@ class _AdminUserManagementFormState extends State<AdminUserManagementForm> {
         'role': _selectedRole,
         'gender': _selectedGender,
         'terminal_id': terminalId,
-        'image': base64Image, // Ipadala ang image as base64
+        'admin_name': 'Admin', // Added to match backend expectation
       };
+
+      if (base64Image != null) {
+        if (isEditing) {
+          body['profile_image_base64'] = base64Image;
+        } else {
+          body['image'] = base64Image;
+        }
+      }
 
       if (password.isNotEmpty) body['password'] = password;
       if (isEditing) body['user_id'] = widget.employeeData!['user_id'];
@@ -162,7 +170,9 @@ class _AdminUserManagementFormState extends State<AdminUserManagementForm> {
                     backgroundImage: _imageBytes != null 
                         ? MemoryImage(_imageBytes!) 
                         : (widget.employeeData?['profile_image'] != null 
-                            ? NetworkImage('$baseUrl/uploads/${widget.employeeData!['profile_image']}') as ImageProvider
+                            ? NetworkImage(widget.employeeData!['profile_image'].toString().startsWith('uploads/')
+                                ? '$baseUrl/${widget.employeeData!['profile_image']}'
+                                : '$baseUrl/uploads/${widget.employeeData!['profile_image']}') as ImageProvider
                             : null),
                     onBackgroundImageError: (widget.employeeData?['profile_image'] != null || _imageBytes != null)
                         ? (exception, stackTrace) {

@@ -302,7 +302,9 @@ class _EmployeesViewState extends State<EmployeesView> {
                   radius: 18,
                   backgroundColor: const Color(0xFFFBECEF),
                   backgroundImage: profileImage.isNotEmpty 
-                      ? NetworkImage('$baseUrl/uploads/$profileImage')
+                      ? NetworkImage(profileImage.startsWith('uploads/') 
+                          ? '$baseUrl/$profileImage' 
+                          : '$baseUrl/uploads/$profileImage')
                       : null,
                   onBackgroundImageError: profileImage.isNotEmpty 
                       ? (exception, stackTrace) {

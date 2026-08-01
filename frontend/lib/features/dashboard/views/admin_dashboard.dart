@@ -383,7 +383,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
           radius: 14,
           backgroundColor: Colors.grey.shade200,
           backgroundImage: _profileImageUrl != null
-              ? NetworkImage('$baseUrl/uploads/$_profileImageUrl')
+              ? NetworkImage(_profileImageUrl!.startsWith('uploads/') 
+                  ? '$baseUrl/$_profileImageUrl' 
+                  : '$baseUrl/uploads/$_profileImageUrl')
               : const NetworkImage('https://i.pravatar.cc/150?img=47'),
         ),
       ),
@@ -482,7 +484,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
             radius: 18,
             backgroundColor: Colors.grey.shade200,
             backgroundImage: _profileImageUrl != null
-                ? NetworkImage('$baseUrl/uploads/$_profileImageUrl')
+                ? NetworkImage(_profileImageUrl!.startsWith('uploads/') 
+                    ? '$baseUrl/$_profileImageUrl' 
+                    : '$baseUrl/uploads/$_profileImageUrl')
                 : const NetworkImage('https://i.pravatar.cc/150?img=47'),
           ),
           const SizedBox(width: 8),
