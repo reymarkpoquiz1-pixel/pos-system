@@ -92,6 +92,17 @@ class _AdminUserManagementFormState extends State<AdminUserManagementForm> {
       return;
     }
 
+    // Validation for Full Name (must contain at least one space)
+    if (!fullName.trim().contains(' ')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Mangyaring ilagay ang buong pangalan (hal: Juan Dela Cruz) na may space sa gitna.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
