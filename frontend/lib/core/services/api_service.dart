@@ -127,7 +127,7 @@ class ApiService {
     return false;
   }
 
-  static Future<http.Response> upload(String endpoint, XFile file, String fieldName) async {
+  static Future<http.Response> upload(String endpoint, XFile file, String fieldName, {Map<String, String>? body}) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('jwt_token');
 
@@ -135,6 +135,10 @@ class ApiService {
     
     if (token != null) {
       request.headers['Authorization'] = 'Bearer $token';
+    }
+
+    if (body != null) {
+      request.fields.addAll(body);
     }
 
     if (kIsWeb) {

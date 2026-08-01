@@ -383,9 +383,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
           radius: 14,
           backgroundColor: Colors.grey.shade200,
           backgroundImage: _profileImageUrl != null
-              ? NetworkImage(_profileImageUrl!.startsWith('uploads/') 
-                  ? '$baseUrl/$_profileImageUrl' 
-                  : '$baseUrl/uploads/$_profileImageUrl')
+              ? NetworkImage(_profileImageUrl!.startsWith('http')
+                  ? _profileImageUrl!
+                  : (_profileImageUrl!.startsWith('uploads/') 
+                      ? '$baseUrl/$_profileImageUrl' 
+                      : '$baseUrl/uploads/$_profileImageUrl'))
               : const NetworkImage('https://i.pravatar.cc/150?img=47'),
         ),
       ),
@@ -484,9 +486,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
             radius: 18,
             backgroundColor: Colors.grey.shade200,
             backgroundImage: _profileImageUrl != null
-                ? NetworkImage(_profileImageUrl!.startsWith('uploads/') 
-                    ? '$baseUrl/$_profileImageUrl' 
-                    : '$baseUrl/uploads/$_profileImageUrl')
+                ? NetworkImage(_profileImageUrl!.startsWith('http')
+                    ? _profileImageUrl!
+                    : (_profileImageUrl!.startsWith('uploads/') 
+                        ? '$baseUrl/$_profileImageUrl' 
+                        : '$baseUrl/uploads/$_profileImageUrl'))
                 : const NetworkImage('https://i.pravatar.cc/150?img=47'),
           ),
           const SizedBox(width: 8),
@@ -589,7 +593,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final image = await picker.pickImage(source: ImageSource.gallery);
     if (image == null) return;
     try {
-      final response = await ApiService.upload('employees/upload_profile_image', image, 'image');
+      final response = await ApiService.upload(
+        'employees/upload_profile_image', 
+        image, 
+        'image', 
+        body: {'user_id': widget.userId.toString()}
+      );
       final data = json.decode(response.body);
       if (data['success']) {
         if (!mounted) return;

@@ -4,6 +4,7 @@ import { Repository, DataSource, Not } from 'typeorm';
 import { Staff, Gender } from './entities/staff.entity';
 import { User, UserRole } from '../users/entities/user.entity';
 import { ActivityLogsService } from '../activity-logs/activity-logs.service';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import * as bcrypt from 'bcrypt';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -16,6 +17,7 @@ export class StaffService {
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private activityLogsService: ActivityLogsService,
+    private cloudinaryService: CloudinaryService,
     private dataSource: DataSource,
   ) {}
 
@@ -79,20 +81,17 @@ export class StaffService {
       if (gender) staff.gender = gender as Gender;
       if (terminal_id) staff.terminalId = terminal_id;
 
-      // Handle Image
+      // Handle Image (Cloudinary)
       if (profile_image_base64) {
-        const fileName = `staff_${user_id}_${Date.now()}.png`;
-        const uploadDir = path.join(process.cwd(), 'uploads');
-        if (!fs.existsSync(uploadDir)) {
-          fs.mkdirSync(uploadDir, { recursive: true });
+        try {
+          const uploadRes = await this.cloudinaryService.uploadBase64(
+            profile_image_base64,
+            'staff_profiles',
+          );
+          staff.profileImage = uploadRes.secure_url;
+        } catch (e) {
+          console.error('Update Image upload failed:', e);
         }
-        const filePath = path.join(uploadDir, fileName);
-        const base64Data = profile_image_base64.replace(
-          /^data:image\/\w+;base64,/,
-          '',
-        );
-        fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'));
-        staff.profileImage = `uploads/${fileName}`;
       }
 
       await manager.save(staff);
@@ -136,5 +135,40 @@ export class StaffService {
 
       return { success: true, message: 'Staff deleted successfully' };
     });
+  }
+
+  async uploadProfileImage(
+    userId: number,
+    file: Express.Multer.File,
+    ip: string,
+  ) {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: { staff: true },
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    const uploadRes = await this.cloudinaryService.uploadFile(file);
+
+    let staff = user.staff;
+    if (!staff) {
+      staff = this.staffRepository.create({ user });
+    }
+
+    staff.profileImage = uploadRes.secure_url;
+    await this.staffRepository.save(staff);
+
+    await this.activityLogsService.log(
+      userId,
+      'UPLOAD_PROFILE_IMAGE',
+      `Uploaded profile image for: ${user.username}`,
+      ip,
+    );
+
+    return {
+      success: true,
+      message: 'Profile image uploaded successfully',
+      profile_image: uploadRes.secure_url,
+    };
   }
 }

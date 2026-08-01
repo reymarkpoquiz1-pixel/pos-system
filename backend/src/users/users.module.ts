@@ -5,9 +5,14 @@ import { UsersController } from './users.controller';
 import { User } from './entities/user.entity';
 import { Staff } from '../staff/entities/staff.entity';
 import { CustomersModule } from '../customers/customers.module';
+import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, Staff]), CustomersModule],
+  imports: [
+    TypeOrmModule.forFeature([User, Staff]),
+    CustomersModule,
+    CloudinaryModule,
+  ],
   providers: [UsersService],
   controllers: [UsersController],
   exports: [UsersService],

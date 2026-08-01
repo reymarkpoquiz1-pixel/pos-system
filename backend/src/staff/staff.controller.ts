@@ -1,5 +1,7 @@
-import { Controller, Post, Get, Body, Req } from '@nestjs/common';
+import { Controller, Post, Get, Body, Req, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { StaffService } from './staff.service';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import type { Request } from 'express';
 
 @Controller('employees')
@@ -19,6 +21,17 @@ export class StaffController {
   async updateStaff(@Body() data: any, @Req() req: any) {
     const ip = req.ip || '0.0.0.0';
     return this.staffService.updateStaff(data, ip);
+  }
+
+  @Post('upload_profile_image')
+  @UseInterceptors(FileInterceptor('image', { storage: memoryStorage() }))
+  async uploadProfileImage(
+    @UploadedFile() file: Express.Multer.File,
+    @Body('user_id') userId: string,
+    @Req() req: any,
+  ) {
+    const ip = req.ip || '0.0.0.0';
+    return this.staffService.uploadProfileImage(+userId, file, ip);
   }
 
   @Post('delete_employees')

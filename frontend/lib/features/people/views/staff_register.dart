@@ -170,9 +170,11 @@ class _AdminUserManagementFormState extends State<AdminUserManagementForm> {
                     backgroundImage: _imageBytes != null 
                         ? MemoryImage(_imageBytes!) 
                         : (widget.employeeData?['profile_image'] != null 
-                            ? NetworkImage(widget.employeeData!['profile_image'].toString().startsWith('uploads/')
-                                ? '$baseUrl/${widget.employeeData!['profile_image']}'
-                                : '$baseUrl/uploads/${widget.employeeData!['profile_image']}') as ImageProvider
+                            ? NetworkImage(widget.employeeData!['profile_image'].toString().startsWith('http')
+                                ? widget.employeeData!['profile_image']
+                                : (widget.employeeData!['profile_image'].toString().startsWith('uploads/')
+                                    ? '$baseUrl/${widget.employeeData!['profile_image']}'
+                                    : '$baseUrl/uploads/${widget.employeeData!['profile_image']}')) as ImageProvider
                             : null),
                     onBackgroundImageError: (widget.employeeData?['profile_image'] != null || _imageBytes != null)
                         ? (exception, stackTrace) {

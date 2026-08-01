@@ -4,6 +4,7 @@ import { Repository, DataSource } from 'typeorm';
 import { User, UserRole } from './entities/user.entity';
 import { Staff } from '../staff/entities/staff.entity';
 import { Customer } from '../customers/entities/customer.entity';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import * as bcrypt from 'bcrypt';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -15,6 +16,7 @@ export class UsersService implements OnModuleInit {
     private usersRepository: Repository<User>,
     @InjectRepository(Staff)
     private staffRepository: Repository<Staff>,
+    private cloudinaryService: CloudinaryService,
     private dataSource: DataSource,
   ) {}
 
@@ -108,19 +110,15 @@ export class UsersService implements OnModuleInit {
       });
       const savedUser = await manager.save(user);
 
-      // 2. Handle Profile Image (Base64)
+      // 2. Handle Profile Image (Cloudinary)
       let profileImage: string | undefined = undefined;
       if (image && image.toString().length > 0) {
         try {
-          const fileName = `profile_${Date.now()}_${Math.random().toString(36).substring(7)}.png`;
-          const uploadDir = path.join(process.cwd(), 'uploads');
-          if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
-          }
-          const filePath = path.join(uploadDir, fileName);
-          const base64Data = image.replace(/^data:image\/\w+;base64,/, '');
-          fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'));
-          profileImage = `uploads/${fileName}`;
+          const uploadRes = await this.cloudinaryService.uploadBase64(
+            image,
+            'staff_profiles',
+          );
+          profileImage = uploadRes.secure_url;
         } catch (e) {
           console.error('Image upload failed:', e);
         }

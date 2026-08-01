@@ -22,4 +22,25 @@ export class CloudinaryService {
       streamifier.createReadStream(file.buffer).pipe(uploadStream);
     });
   }
+
+  async uploadBase64(
+    base64String: string,
+    folder: string,
+  ): Promise<CloudinaryResponse> {
+    return new Promise((resolve, reject) => {
+      // Remove data:image/xxx;base64, prefix if present
+      const cleanBase64 = base64String.replace(/^data:image\/\w+;base64,/, '');
+
+      cloudinary.uploader.upload(
+        `data:image/png;base64,${cleanBase64}`,
+        { folder },
+        (error, result) => {
+          if (error) return reject(new Error(error.message));
+          if (!result)
+            return reject(new Error('Cloudinary upload failed: Empty result'));
+          resolve(result);
+        },
+      );
+    });
+  }
 }
