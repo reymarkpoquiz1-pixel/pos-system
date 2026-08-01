@@ -205,14 +205,15 @@ export class SalesService {
         return { success: true, sale_id: savedSale.id };
       });
     } catch (error) {
-      this.logger.error(`Failed to place order: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to place order: ${errorMessage}`);
       throw error;
     }
   }
 
   async getShiftHistory() {
     return await this.saleRepository.find({
-      relations: { user: true, branch: true },
+      relations: ['user', 'branch'],
       order: { transactionDate: 'DESC' },
       take: 20,
     });

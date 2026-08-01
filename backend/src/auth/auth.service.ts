@@ -41,6 +41,7 @@ export class AuthService {
       is_2fa_enabled: user.is2faEnabled ? 1 : 0,
       first_name: user.staff?.firstName || '',
       last_name: user.staff?.lastName || '',
+      gender: user.staff?.gender || null,
       profile_image: user.staff?.profileImage || null,
       terminal_id: user.staff?.terminalId || '0',
     };

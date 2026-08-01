@@ -243,6 +243,7 @@ export class AdminService {
         status: e.status,
         first_name: e.staff?.firstName,
         last_name: e.staff?.lastName,
+        gender: e.staff?.gender,
         profile_image: e.staff?.profileImage,
         terminal_id: e.staff?.terminalId,
         created_at: e.createdAt,
