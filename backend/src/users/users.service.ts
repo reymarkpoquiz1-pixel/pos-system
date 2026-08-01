@@ -113,6 +113,7 @@ export class UsersService implements OnModuleInit {
       role,
       image,
       email,
+      branch_id,
     } = data;
 
     const existingUser = await this.findByUsername(username);
@@ -147,6 +148,7 @@ export class UsersService implements OnModuleInit {
         password: hashedPassword,
         role: (role as UserRole) || UserRole.STAFF,
         email: userEmail,
+        branchId: branch_id || 1, // Use provided branch or default to 1
       });
       const savedUser = await manager.save(User, user);
 

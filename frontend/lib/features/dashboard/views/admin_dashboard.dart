@@ -206,7 +206,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         );
       case 'Categories': return CategoriesView(categoriesList: _categoriesList, onRefresh: _fetchAllData, isMobile: isMobile);
       case 'Inventory': return InventoryView(key: const PageStorageKey('InventoryView'), productsList: _productsList, userId: widget.userId, onRefresh: _fetchAllData);
-      case 'Employees': return EmployeesView(employeesList: _employeesList, isMobile: isMobile, onRefresh: _fetchAllData);
+      case 'Employees': return EmployeesView(employeesList: _employeesList, branchesList: _branches, isMobile: isMobile, onRefresh: _fetchAllData);
       case 'Customers': return CustomersView(customersList: _customersList, onRefresh: _fetchAllData);
       case 'Orders': return TransactionsView(transactionsList: _transactionsList, onRefresh: _fetchAllData, storeSettings: _storeSettings);
       case 'Refunds': return const RefundsView();

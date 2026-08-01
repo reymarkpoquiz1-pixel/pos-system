@@ -8,10 +8,11 @@ import 'package:pos/core/constants/config.dart';
 class AdminUserManagementForm extends StatefulWidget {
   final VoidCallback? onAccountCreated;
   final Map<String, dynamic>? employeeData;
+  final List<dynamic>? branchesList;
 
-  const AdminUserManagementForm({super.key, this.onAccountCreated, this.employeeData});
+  const AdminUserManagementForm({super.key, this.onAccountCreated, this.employeeData, this.branchesList});
 
-  static void show(BuildContext context, {VoidCallback? onAccountCreated, Map<String, dynamic>? employeeData}) {
+  static void show(BuildContext context, {VoidCallback? onAccountCreated, Map<String, dynamic>? employeeData, List<dynamic>? branchesList}) {
     showDialog(
       context: context,
       barrierDismissible: true,
@@ -23,6 +24,7 @@ class AdminUserManagementForm extends StatefulWidget {
           child: AdminUserManagementForm(
             onAccountCreated: onAccountCreated,
             employeeData: employeeData,
+            branchesList: branchesList,
           ),
         ),
       ),
@@ -41,6 +43,7 @@ class _AdminUserManagementFormState extends State<AdminUserManagementForm> {
   late final TextEditingController _terminalController;
   String _selectedRole = 'Staff';
   String _selectedGender = 'Male';
+  int _selectedBranchId = 1;
   bool _isLoading = false;
   bool _obscurePassword = true;
 
@@ -60,6 +63,7 @@ class _AdminUserManagementFormState extends State<AdminUserManagementForm> {
     _terminalController = TextEditingController(text: widget.employeeData?['terminal_id']?.toString() ?? '');
     _selectedRole = widget.employeeData?['role']?.toString() ?? 'Staff';
     _selectedGender = widget.employeeData?['gender']?.toString() ?? 'Male';
+    _selectedBranchId = int.tryParse(widget.employeeData?['branch_id']?.toString() ?? '1') ?? 1;
   }
 
   Future<void> _pickImage() async {
@@ -122,6 +126,7 @@ class _AdminUserManagementFormState extends State<AdminUserManagementForm> {
         'role': _selectedRole,
         'gender': _selectedGender,
         'terminal_id': terminalId,
+        'branch_id': _selectedBranchId,
         'admin_name': 'Admin',
       };
 
@@ -222,6 +227,8 @@ class _AdminUserManagementFormState extends State<AdminUserManagementForm> {
             const SizedBox(height: 16),
             _buildTextField(_usernameController, 'Username', Icons.alternate_email),
             const SizedBox(height: 16),
+            _buildBranchDropdown(),
+            const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
@@ -300,6 +307,36 @@ class _AdminUserManagementFormState extends State<AdminUserManagementForm> {
           items: items.map((e) => DropdownMenuItem(value: e, child: Text(e, style: const TextStyle(fontSize: 14)))).toList(),
           onChanged: onChanged,
           decoration: InputDecoration(
+            filled: true,
+            fillColor: Colors.grey[50],
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBranchDropdown() {
+    final branches = widget.branchesList ?? [];
+    if (branches.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Assigned Branch', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<int>(
+          value: _selectedBranchId,
+          items: branches.map((b) => DropdownMenuItem<int>(
+            value: int.tryParse(b['id'].toString()) ?? 1,
+            child: Text(b['name'], style: const TextStyle(fontSize: 14))
+          )).toList(),
+          onChanged: (val) {
+            if (val != null) setState(() => _selectedBranchId = val);
+          },
+          decoration: InputDecoration(
+            prefixIcon: const Icon(Icons.storefront_outlined, size: 18),
             filled: true,
             fillColor: Colors.grey[50],
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

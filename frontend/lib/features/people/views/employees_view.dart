@@ -8,12 +8,14 @@ import 'package:pos/core/constants/config.dart';
 
 class EmployeesView extends StatefulWidget {
   final List<dynamic> employeesList;
+  final List<dynamic> branchesList;
   final bool isMobile;
   final VoidCallback onRefresh;
 
   const EmployeesView({
     super.key,
     required this.employeesList,
+    required this.branchesList,
     required this.isMobile,
     required this.onRefresh,
   });
@@ -368,6 +370,7 @@ class _EmployeesViewState extends State<EmployeesView> {
                   onTap: () => AdminUserManagementForm.show(
                     context, 
                     employeeData: emp, 
+                    branchesList: widget.branchesList,
                     onAccountCreated: widget.onRefresh
                   ),
                   child: _actionButton(Icons.edit_outlined, Colors.brown[700]!),
@@ -469,7 +472,7 @@ class _EmployeesViewState extends State<EmployeesView> {
         SizedBox(
           height: 42,
           child: ElevatedButton.icon(
-            onPressed: () => AdminUserManagementForm.show(context, onAccountCreated: widget.onRefresh),
+            onPressed: () => AdminUserManagementForm.show(context, branchesList: widget.branchesList, onAccountCreated: widget.onRefresh),
             icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
             label: Text(
               widget.isMobile ? 'Add' : 'Add New Staff',
