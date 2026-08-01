@@ -99,8 +99,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   Future<void> _fetchAllData() async {
     bool hasAnyData = _productsList.isNotEmpty || _dashboardStats['total_sales_today'] != '0.00';
-    if (!hasAnyData) setState(() => _isLoading = true);
-    else setState(() => _isSyncing = true);
+    if (!hasAnyData) {
+      setState(() => _isLoading = true);
+    } else {
+      setState(() => _isSyncing = true);
+    }
     
     try {
       final response = await ApiService.get('admin/get_initial_data?user_id=${widget.userId}&branch_id=$_selectedBranchId');
@@ -582,7 +585,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final image = await picker.pickImage(source: ImageSource.gallery);
     if (image == null) return;
     try {
-      final response = await ApiService.upload('employees/upload_profile_image', image.path, 'image');
+      final response = await ApiService.upload('employees/upload_profile_image', image, 'image');
       final data = json.decode(response.body);
       if (data['success']) {
         if (!mounted) return;

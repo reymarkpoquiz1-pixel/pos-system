@@ -131,7 +131,7 @@ class _SettingsViewState extends State<SettingsView> {
 
     setState(() => _isSaving = true);
     try {
-      final response = await ApiService.upload('settings/upload_logo', image.path, 'logo');
+      final response = await ApiService.upload('settings/upload_logo', image, 'logo');
       final data = json.decode(response.body);
       
       if (data['success']) {

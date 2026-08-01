@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:image_picker/image_picker.dart';
 import 'package:pos/core/services/api_service.dart';
 import 'package:pos/core/constants/config.dart';
@@ -44,7 +44,7 @@ class _AdminUserManagementFormState extends State<AdminUserManagementForm> {
   bool _isLoading = false;
   bool _obscurePassword = true;
 
-  File? _imageFile;
+  Uint8List? _imageBytes;
   final _picker = ImagePicker();
 
   @override
@@ -62,7 +62,8 @@ class _AdminUserManagementFormState extends State<AdminUserManagementForm> {
   Future<void> _pickImage() async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 50);
     if (pickedFile != null) {
-      setState(() => _imageFile = File(pickedFile.path));
+      final bytes = await pickedFile.readAsBytes();
+      setState(() => _imageBytes = bytes);
     }
   }
 
@@ -96,8 +97,8 @@ class _AdminUserManagementFormState extends State<AdminUserManagementForm> {
 
     try {
       String? base64Image;
-      if (_imageFile != null) {
-        base64Image = base64Image = base64Encode(_imageFile!.readAsBytesSync());
+      if (_imageBytes != null) {
+        base64Image = base64Encode(_imageBytes!);
       }
 
       final Map<String, dynamic> body = {
@@ -158,17 +159,17 @@ class _AdminUserManagementFormState extends State<AdminUserManagementForm> {
                   CircleAvatar(
                     radius: 40,
                     backgroundColor: Colors.grey[200],
-                    backgroundImage: _imageFile != null 
-                        ? FileImage(_imageFile!) 
+                    backgroundImage: _imageBytes != null 
+                        ? MemoryImage(_imageBytes!) 
                         : (widget.employeeData?['profile_image'] != null 
                             ? NetworkImage('$baseUrl/uploads/${widget.employeeData!['profile_image']}') as ImageProvider
                             : null),
-                    onBackgroundImageError: (widget.employeeData?['profile_image'] != null || _imageFile != null)
+                    onBackgroundImageError: (widget.employeeData?['profile_image'] != null || _imageBytes != null)
                         ? (exception, stackTrace) {
                             debugPrint('Staff register profile image error: $exception');
                           }
                         : null,
-                    child: (_imageFile == null && widget.employeeData?['profile_image'] == null) 
+                    child: (_imageBytes == null && widget.employeeData?['profile_image'] == null) 
                         ? const Icon(Icons.person, size: 40, color: Colors.grey) 
                         : null,
                   ),

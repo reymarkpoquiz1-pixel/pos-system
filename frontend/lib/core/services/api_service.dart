@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
 import '../constants/config.dart';
 import 'database_helper.dart';
 
@@ -125,7 +127,7 @@ class ApiService {
     return false;
   }
 
-  static Future<http.Response> upload(String endpoint, String filePath, String fieldName) async {
+  static Future<http.Response> upload(String endpoint, XFile file, String fieldName) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('jwt_token');
 
@@ -135,7 +137,16 @@ class ApiService {
       request.headers['Authorization'] = 'Bearer $token';
     }
 
-    request.files.add(await http.MultipartFile.fromPath(fieldName, filePath));
+    if (kIsWeb) {
+      final bytes = await file.readAsBytes();
+      request.files.add(http.MultipartFile.fromBytes(
+        fieldName,
+        bytes,
+        filename: file.name,
+      ));
+    } else {
+      request.files.add(await http.MultipartFile.fromPath(fieldName, file.path));
+    }
 
     var streamedResponse = await request.send();
     var response = await http.Response.fromStream(streamedResponse);
