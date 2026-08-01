@@ -36,6 +36,7 @@ class AdminUserManagementForm extends StatefulWidget {
 class _AdminUserManagementFormState extends State<AdminUserManagementForm> {
   late final TextEditingController _fullNameController;
   late final TextEditingController _emailController;
+  late final TextEditingController _usernameController;
   late final TextEditingController _passwordController;
   late final TextEditingController _terminalController;
   String _selectedRole = 'Staff';
@@ -54,6 +55,7 @@ class _AdminUserManagementFormState extends State<AdminUserManagementForm> {
         : '';
     _fullNameController = TextEditingController(text: initialName);
     _emailController = TextEditingController(text: widget.employeeData?['email']?.toString() ?? '');
+    _usernameController = TextEditingController(text: widget.employeeData?['username']?.toString() ?? '');
     _passwordController = TextEditingController();
     _terminalController = TextEditingController(text: widget.employeeData?['terminal_id']?.toString() ?? '');
     _selectedRole = widget.employeeData?['role']?.toString() ?? 'Staff';
@@ -72,6 +74,7 @@ class _AdminUserManagementFormState extends State<AdminUserManagementForm> {
   void dispose() {
     _fullNameController.dispose();
     _emailController.dispose();
+    _usernameController.dispose();
     _passwordController.dispose();
     _terminalController.dispose();
     super.dispose();
@@ -80,12 +83,13 @@ class _AdminUserManagementFormState extends State<AdminUserManagementForm> {
   void _saveAccount() async {
     final fullName = _fullNameController.text.trim();
     final email = _emailController.text.trim();
+    final username = _usernameController.text.trim();
     final password = _passwordController.text.trim();
     final terminalId = _terminalController.text.trim();
 
     final isEditing = widget.employeeData != null;
 
-    if (email.isEmpty || fullName.isEmpty || terminalId.isEmpty || (!isEditing && password.isEmpty)) {
+    if (email.isEmpty || fullName.isEmpty || username.isEmpty || terminalId.isEmpty || (!isEditing && password.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill in all fields!'), backgroundColor: Colors.redAccent),
       );
@@ -114,7 +118,7 @@ class _AdminUserManagementFormState extends State<AdminUserManagementForm> {
       final Map<String, dynamic> body = {
         'name': fullName,
         'email': email,
-        'username': email, // Use email as username
+        'username': username,
         'role': _selectedRole,
         'gender': _selectedGender,
         'terminal_id': terminalId,
@@ -215,6 +219,8 @@ class _AdminUserManagementFormState extends State<AdminUserManagementForm> {
             _buildTextField(_fullNameController, 'Full Name', Icons.person_outline),
             const SizedBox(height: 16),
             _buildTextField(_emailController, 'Email Address', Icons.email_outlined),
+            const SizedBox(height: 16),
+            _buildTextField(_usernameController, 'Username', Icons.alternate_email),
             const SizedBox(height: 16),
             Row(
               children: [
