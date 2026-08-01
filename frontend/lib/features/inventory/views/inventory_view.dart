@@ -95,7 +95,7 @@ class _InventoryViewState extends State<InventoryView> {
       final response = await ApiService.get('products/get_stock_history?product_id=$productId');
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        if (data['success'] == true) {
+        if (data['success'] == true && mounted) {
           setState(() {
             _stockHistory = data['history'] ?? [];
             _isLoadingHistory = false;
@@ -104,7 +104,7 @@ class _InventoryViewState extends State<InventoryView> {
       }
     } catch (e) {
       debugPrint('Error fetching stock history: $e');
-      setState(() => _isLoadingHistory = false);
+      if (mounted) setState(() => _isLoadingHistory = false);
     }
   }
 

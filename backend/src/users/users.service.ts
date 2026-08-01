@@ -61,18 +61,31 @@ export class UsersService implements OnModuleInit {
     const hashedPassword = await bcrypt.hash(registrationDto.password, 10);
 
     return await this.dataSource.transaction(async (manager) => {
+      // Determine name and email for the profile
+      const fullName =
+        registrationDto.name ||
+        (registrationDto.first_name && registrationDto.last_name
+          ? `${registrationDto.first_name} ${registrationDto.last_name}`
+          : registrationDto.username);
+
+      const userEmail =
+        registrationDto.email ||
+        (registrationDto.username.includes('@')
+          ? registrationDto.username
+          : null);
+
       const user = manager.create(User, {
         username: registrationDto.username,
         password: hashedPassword,
         role: UserRole.USER,
-        email: registrationDto.email,
+        email: userEmail,
       });
       const savedUser = await manager.save(user);
 
       const customer = manager.create(Customer, {
         user: savedUser,
-        name: registrationDto.name || registrationDto.username,
-        email: registrationDto.email,
+        name: fullName,
+        email: userEmail,
         phone: registrationDto.phone,
       });
       await manager.save(customer);
@@ -81,17 +94,18 @@ export class UsersService implements OnModuleInit {
     });
   }
 
-  async registerStaff(data: any) {
+  async registerStaff(data: any, adminId?: number) {
     const {
       username,
       password,
       first_name,
       last_name,
+      name, // New field for Full Name
       gender,
       terminal_id,
       role,
-      admin_name,
       image,
+      email,
     } = data;
 
     const existingUser = await this.findByUsername(username);
@@ -102,15 +116,29 @@ export class UsersService implements OnModuleInit {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     return await this.dataSource.transaction(async (manager) => {
-      // 1. Create User
+      // 1. Determine names
+      let finalFirstName = first_name;
+      let finalLastName = last_name;
+
+      if (name && !first_name && !last_name) {
+        const nameParts = name.trim().split(' ');
+        finalFirstName = nameParts[0];
+        finalLastName = nameParts.slice(1).join(' ') || ' ';
+      }
+
+      // 2. Determine email
+      const userEmail = email || (username.includes('@') ? username : null);
+
+      // 3. Create User
       const user = manager.create(User, {
         username,
         password: hashedPassword,
         role: (role as UserRole) || UserRole.STAFF,
+        email: userEmail,
       });
-      const savedUser = await manager.save(user);
+      const savedUser = await manager.save(User, user);
 
-      // 2. Handle Profile Image (Cloudinary)
+      // 4. Handle Profile Image (Cloudinary)
       let profileImage: string | undefined = undefined;
       if (image && image.toString().length > 0) {
         try {
@@ -124,17 +152,17 @@ export class UsersService implements OnModuleInit {
         }
       }
 
-      // 3. Create Staff Info
+      // 5. Create Staff Info
       const staff = manager.create(Staff, {
         user: savedUser,
-        firstName: first_name,
-        lastName: last_name,
+        firstName: finalFirstName || ' ',
+        lastName: finalLastName || ' ',
         gender: gender || 'Male',
         terminalId: terminal_id || '0',
         profileImage: profileImage,
-        addedByName: admin_name || 'Admin',
+        addedByAdminId: adminId, // Fixed mapping to match entity
       } as any);
-      await manager.save(staff);
+      await manager.save(Staff, staff);
 
       return { success: true, message: 'Staff account created successfully!' };
     });

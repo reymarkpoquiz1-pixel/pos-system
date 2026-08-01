@@ -17,9 +17,11 @@ export class AppController {
     return this.usersService.register(registrationDto);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post('register')
-  async registerStaff(@Body() data: any) {
-    return this.usersService.registerStaff(data);
+  async registerStaff(@Body() data: any, @Req() req: any) {
+    const adminId = req.user.id;
+    return this.usersService.registerStaff(data, adminId);
   }
 
   @UseGuards(JwtAuthGuard)

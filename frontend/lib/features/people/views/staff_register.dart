@@ -34,8 +34,8 @@ class AdminUserManagementForm extends StatefulWidget {
 }
 
 class _AdminUserManagementFormState extends State<AdminUserManagementForm> {
-  late final TextEditingController _firstNameController;
-  late final TextEditingController _lastNameController;
+  late final TextEditingController _fullNameController;
+  late final TextEditingController _emailController;
   late final TextEditingController _usernameController;
   late final TextEditingController _passwordController;
   late final TextEditingController _terminalController;
@@ -50,8 +50,11 @@ class _AdminUserManagementFormState extends State<AdminUserManagementForm> {
   @override
   void initState() {
     super.initState();
-    _firstNameController = TextEditingController(text: widget.employeeData?['first_name']?.toString() ?? '');
-    _lastNameController = TextEditingController(text: widget.employeeData?['last_name']?.toString() ?? '');
+    final String initialName = widget.employeeData != null 
+        ? '${widget.employeeData!['first_name'] ?? ''} ${widget.employeeData!['last_name'] ?? ''}'.trim() 
+        : '';
+    _fullNameController = TextEditingController(text: initialName);
+    _emailController = TextEditingController(text: widget.employeeData?['email']?.toString() ?? '');
     _usernameController = TextEditingController(text: widget.employeeData?['username']?.toString() ?? '');
     _passwordController = TextEditingController();
     _terminalController = TextEditingController(text: widget.employeeData?['terminal_id']?.toString() ?? '');
@@ -69,8 +72,8 @@ class _AdminUserManagementFormState extends State<AdminUserManagementForm> {
 
   @override
   void dispose() {
-    _firstNameController.dispose();
-    _lastNameController.dispose();
+    _fullNameController.dispose();
+    _emailController.dispose();
     _usernameController.dispose();
     _passwordController.dispose();
     _terminalController.dispose();
@@ -78,15 +81,15 @@ class _AdminUserManagementFormState extends State<AdminUserManagementForm> {
   }
 
   void _saveAccount() async {
-    final firstName = _firstNameController.text.trim();
-    final lastName = _lastNameController.text.trim();
+    final fullName = _fullNameController.text.trim();
+    final email = _emailController.text.trim();
     final username = _usernameController.text.trim();
     final password = _passwordController.text.trim();
     final terminalId = _terminalController.text.trim();
 
     final isEditing = widget.employeeData != null;
 
-    if (username.isEmpty || firstName.isEmpty || lastName.isEmpty || terminalId.isEmpty || (!isEditing && password.isEmpty)) {
+    if (username.isEmpty || fullName.isEmpty || terminalId.isEmpty || (!isEditing && password.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill in all fields!'), backgroundColor: Colors.redAccent),
       );
@@ -102,13 +105,13 @@ class _AdminUserManagementFormState extends State<AdminUserManagementForm> {
       }
 
       final Map<String, dynamic> body = {
-        'first_name': firstName,
-        'last_name': lastName,
+        'name': fullName,
+        'email': email,
         'username': username,
         'role': _selectedRole,
         'gender': _selectedGender,
         'terminal_id': terminalId,
-        'admin_name': 'Admin', // Added to match backend expectation
+        'admin_name': 'Admin',
       };
 
       if (base64Image != null) {
@@ -202,19 +205,23 @@ class _AdminUserManagementFormState extends State<AdminUserManagementForm> {
             ),
             const SizedBox(height: 20),
             
-            LayoutBuilder(
-              builder: (context, constraints) {
-                return Row(
-                  children: [
-                    Expanded(child: _buildTextField(_firstNameController, 'First Name', Icons.person_outline)),
-                    const SizedBox(width: 12),
-                    Expanded(child: _buildTextField(_lastNameController, 'Last Name', Icons.person_outline)),
-                  ],
-                );
-              },
-            ),
+            _buildTextField(_fullNameController, 'Full Name', Icons.person_outline),
+            const SizedBox(height: 16),
+            _buildTextField(_emailController, 'Email Address', Icons.email_outlined),
             const SizedBox(height: 16),
             _buildTextField(_usernameController, 'Username', Icons.alternate_email),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildDropdownField('Role', _selectedRole, ['Staff', 'Admin'], (v) => setState(() => _selectedRole = v!)),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildDropdownField('Gender', _selectedGender, ['Male', 'Female'], (v) => setState(() => _selectedGender = v!)),
+                ),
+              ],
+            ),
             const SizedBox(height: 16),
             TextField(
               controller: _passwordController,
@@ -264,6 +271,27 @@ class _AdminUserManagementFormState extends State<AdminUserManagementForm> {
             prefixIcon: Icon(icon, size: 18),
             filled: true,
             fillColor: Colors.grey[50],
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDropdownField(String label, String value, List<String> items, ValueChanged<String?> onChanged) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<String>(
+          value: value,
+          items: items.map((e) => DropdownMenuItem(value: e, child: Text(e, style: const TextStyle(fontSize: 14)))).toList(),
+          onChanged: onChanged,
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: Colors.grey[50],
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
