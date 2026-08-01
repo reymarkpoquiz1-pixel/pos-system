@@ -41,8 +41,8 @@ class _AdminUserManagementFormState extends State<AdminUserManagementForm> {
   late final TextEditingController _usernameController;
   late final TextEditingController _passwordController;
   late final TextEditingController _terminalController;
-  String _selectedRole = 'Staff';
-  String _selectedGender = 'Male';
+  String? _selectedRole;
+  String? _selectedGender;
   int _selectedBranchId = 1;
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -61,8 +61,8 @@ class _AdminUserManagementFormState extends State<AdminUserManagementForm> {
     _usernameController = TextEditingController(text: widget.employeeData?['username']?.toString() ?? '');
     _passwordController = TextEditingController();
     _terminalController = TextEditingController(text: widget.employeeData?['terminal_id']?.toString() ?? '');
-    _selectedRole = widget.employeeData?['role']?.toString() ?? 'Staff';
-    _selectedGender = widget.employeeData?['gender']?.toString() ?? 'Male';
+    _selectedRole = widget.employeeData?['role']?.toString();
+    _selectedGender = widget.employeeData?['gender']?.toString();
     _selectedBranchId = int.tryParse(widget.employeeData?['branch_id']?.toString() ?? '1') ?? 1;
   }
 
@@ -93,9 +93,10 @@ class _AdminUserManagementFormState extends State<AdminUserManagementForm> {
 
     final isEditing = widget.employeeData != null;
 
-    if (email.isEmpty || fullName.isEmpty || username.isEmpty || terminalId.isEmpty || (!isEditing && password.isEmpty)) {
+    if (email.isEmpty || fullName.isEmpty || username.isEmpty || terminalId.isEmpty || 
+        (!isEditing && password.isEmpty) || _selectedRole == null || _selectedGender == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in all fields!'), backgroundColor: Colors.redAccent),
+        const SnackBar(content: Text('Please fill in all fields including Role and Gender!'), backgroundColor: Colors.redAccent),
       );
       return;
     }
@@ -232,11 +233,11 @@ class _AdminUserManagementFormState extends State<AdminUserManagementForm> {
             Row(
               children: [
                 Expanded(
-                  child: _buildDropdownField('Role', _selectedRole, ['Staff', 'Admin'], (v) => setState(() => _selectedRole = v!)),
+                  child: _buildDropdownField('Role', _selectedRole, ['Staff', 'Admin'], (v) => setState(() => _selectedRole = v)),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _buildDropdownField('Gender', _selectedGender, ['Male', 'Female'], (v) => setState(() => _selectedGender = v!)),
+                  child: _buildDropdownField('Gender', _selectedGender, ['Male', 'Female'], (v) => setState(() => _selectedGender = v)),
                 ),
               ],
             ),
@@ -296,7 +297,7 @@ class _AdminUserManagementFormState extends State<AdminUserManagementForm> {
     );
   }
 
-  Widget _buildDropdownField(String label, String value, List<String> items, ValueChanged<String?> onChanged) {
+  Widget _buildDropdownField(String label, String? value, List<String> items, ValueChanged<String?> onChanged) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -304,6 +305,7 @@ class _AdminUserManagementFormState extends State<AdminUserManagementForm> {
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
           value: value,
+          hint: Text('Select $label', style: const TextStyle(fontSize: 14, color: Colors.grey)),
           items: items.map((e) => DropdownMenuItem(value: e, child: Text(e, style: const TextStyle(fontSize: 14)))).toList(),
           onChanged: onChanged,
           decoration: InputDecoration(
