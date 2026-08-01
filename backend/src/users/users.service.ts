@@ -25,8 +25,10 @@ export class UsersService implements OnModuleInit {
   }
 
   async seedAdmin() {
-    const admin = await this.findByUsername('admin');
-    if (!admin) {
+    const anyAdmin = await this.usersRepository.findOne({
+      where: { role: UserRole.ADMIN },
+    });
+    if (!anyAdmin) {
       console.log('Seeding default admin user...');
       await this.create({
         username: 'admin',
