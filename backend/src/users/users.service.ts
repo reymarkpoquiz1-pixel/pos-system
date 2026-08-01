@@ -43,6 +43,13 @@ export class UsersService implements OnModuleInit {
     });
   }
 
+  async findByUsernameOrEmail(identifier: string): Promise<User | null> {
+    return this.usersRepository.findOne({
+      where: [{ username: identifier }, { email: identifier }],
+      relations: { staff: true },
+    });
+  }
+
   async create(userData: Partial<User>): Promise<User> {
     const hashedPassword = await bcrypt.hash(userData.password, 10);
     const user = this.usersRepository.create({
@@ -126,12 +133,17 @@ export class UsersService implements OnModuleInit {
         finalLastName = nameParts.slice(1).join(' ') || ' ';
       }
 
-      // 2. Determine email
-      const userEmail = email || (username.includes('@') ? username : null);
+      // 2. Determine email and username
+      const userEmail = email || (username && username.includes('@') ? username : null);
+      const finalUsername = username || userEmail;
+
+      if (!finalUsername) {
+        throw new ConflictException('Username or Email is required');
+      }
 
       // 3. Create User
       const user = manager.create(User, {
-        username,
+        username: finalUsername,
         password: hashedPassword,
         role: (role as UserRole) || UserRole.STAFF,
         email: userEmail,
