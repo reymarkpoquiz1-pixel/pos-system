@@ -1,0 +1,40 @@
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.layout.buildDirectory = file("../build")
+subprojects {
+    project.layout.buildDirectory = rootProject.layout.buildDirectory.dir(project.name)
+}
+
+subprojects {
+    afterEvaluate { project ->
+        if (project.hasProperty('android')) {
+            project.android {
+                if (namespace == null) {
+                    namespace = "com.example.pos"
+                }
+                // Dito natin ifo-force ang version para sa lahat ng plugins
+                compileSdkVersion 36
+                buildToolsVersion "36.0.0"
+                
+                defaultConfig {
+                    minSdkVersion 24
+                    targetSdkVersion 34
+                }
+
+                compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_17
+                    targetCompatibility JavaVersion.VERSION_17
+                }
+            }
+        }
+    }
+}
+
+tasks.register("clean", Delete) {
+    delete rootProject.layout.buildDirectory
+}
